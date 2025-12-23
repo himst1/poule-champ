@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Trophy, Users, ArrowLeft, Share2, Copy, Check, Target, Loader2, Lock, Clock } from "lucide-react";
+import { Trophy, Users, ArrowLeft, Share2, Copy, Check, Target, Loader2, Lock, Clock, Brain } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { format, parseISO, isBefore, addMinutes, differenceInMinutes, differenceInSeconds } from "date-fns";
 import { nl } from "date-fns/locale";
+import { BulkAIPredictionModal } from "@/components/BulkAIPredictionModal";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { AIPredictionModal } from "@/components/AIPredictionModal";
 
 // Countdown hook for upcoming matches
 const useCountdown = (targetDate: Date) => {
@@ -208,6 +211,17 @@ const PouleDetail = () => {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<"ranking" | "matches" | "predictions">("ranking");
   const [copied, setCopied] = useState(false);
+  const [showBulkAIPrediction, setShowBulkAIPrediction] = useState(false);
+  const [bulkPredictions, setBulkPredictions] = useState<Record<string, { homeScore: number; awayScore: number }>>({});
+
+  // Handle bulk predictions applied
+  const handleBulkPredictionsApplied = (predictions: { matchId: string; homeScore: number; awayScore: number }[]) => {
+    const newBulkPredictions: Record<string, { homeScore: number; awayScore: number }> = {};
+    predictions.forEach(p => {
+      newBulkPredictions[p.matchId] = { homeScore: p.homeScore, awayScore: p.awayScore };
+    });
+    setBulkPredictions(newBulkPredictions);
+  };
 
   // Fetch poule details
   const { data: poule, isLoading: pouleLoading } = useQuery({
@@ -250,21 +264,32 @@ const PouleDetail = () => {
     enabled: !!id,
   });
 
-  // Fetch upcoming matches (first 10)
+  // Fetch upcoming matches (all pending for bulk AI)
   const { data: matches } = useQuery({
-    queryKey: ["upcoming-matches"],
+    queryKey: ["all-pending-matches"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("matches")
         .select("*")
         .eq("status", "pending")
-        .order("kickoff_time", { ascending: true })
-        .limit(10);
+        .order("kickoff_time", { ascending: true });
       
       if (error) throw error;
       return data as Match[];
     },
   });
+
+  // First 10 matches for display
+  const displayMatches = matches?.slice(0, 10) || [];
+
+  // Get predictable matches (pending matches that haven't started yet)
+  const predictableMatches = useMemo(() => {
+    if (!matches) return [];
+    return matches.filter(match => {
+      const kickoffDate = parseISO(match.kickoff_time);
+      return isBefore(new Date(), kickoffDate);
+    });
+  }, [matches]);
 
   // Fetch user's predictions for this poule
   const { data: predictions } = useQuery({
@@ -475,9 +500,25 @@ const PouleDetail = () => {
 
           {activeTab === "matches" && (
             <div className="space-y-4">
-              <h2 className="font-display font-bold text-lg mb-4">Komende Wedstrijden</h2>
-              {matches && matches.length > 0 ? (
-                matches.map((match) => (
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="font-display font-bold text-lg">Komende Wedstrijden</h2>
+                {user && predictableMatches.length > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowBulkAIPrediction(true)}
+                    className="gap-2"
+                  >
+                    <Brain className="w-4 h-4 text-primary" />
+                    Bulk AI
+                    <span className="bg-primary/10 text-primary text-xs px-1.5 py-0.5 rounded">
+                      {predictableMatches.length}
+                    </span>
+                  </Button>
+                )}
+              </div>
+              {displayMatches && displayMatches.length > 0 ? (
+                displayMatches.map((match) => (
                   <MatchPredictionCard
                     key={match.id}
                     match={match}
@@ -485,6 +526,7 @@ const PouleDetail = () => {
                     pouleId={id!}
                     userId={user?.id}
                     onSave={() => queryClient.invalidateQueries({ queryKey: ["poule-predictions"] })}
+                    bulkPrediction={bulkPredictions[match.id]}
                   />
                 ))
               ) : (
@@ -528,6 +570,14 @@ const PouleDetail = () => {
       </main>
 
       <Footer />
+
+      {/* Bulk AI Prediction Modal */}
+      <BulkAIPredictionModal
+        isOpen={showBulkAIPrediction}
+        onClose={() => setShowBulkAIPrediction(false)}
+        matches={predictableMatches}
+        onApplyPredictions={handleBulkPredictionsApplied}
+      />
     </div>
   );
 };
@@ -539,18 +589,36 @@ interface MatchPredictionCardProps {
   pouleId: string;
   userId?: string;
   onSave: () => void;
+  bulkPrediction?: { homeScore: number; awayScore: number };
 }
 
-const MatchPredictionCard = ({ match, prediction, pouleId, userId, onSave }: MatchPredictionCardProps) => {
+const MatchPredictionCard = ({ match, prediction, pouleId, userId, onSave, bulkPrediction }: MatchPredictionCardProps) => {
   const kickoffDate = parseISO(match.kickoff_time);
   const lockTime = addMinutes(kickoffDate, -5); // Lock 5 minutes before kickoff
   
   const [now, setNow] = useState(new Date());
-  const [homeScore, setHomeScore] = useState(prediction?.predicted_home_score?.toString() || "");
-  const [awayScore, setAwayScore] = useState(prediction?.predicted_away_score?.toString() || "");
+  const [homeScore, setHomeScore] = useState(
+    bulkPrediction?.homeScore?.toString() || 
+    prediction?.predicted_home_score?.toString() || 
+    ""
+  );
+  const [awayScore, setAwayScore] = useState(
+    bulkPrediction?.awayScore?.toString() || 
+    prediction?.predicted_away_score?.toString() || 
+    ""
+  );
   const [isSaving, setIsSaving] = useState(false);
+  const [showAIPrediction, setShowAIPrediction] = useState(false);
   
   const { toast } = useToast();
+
+  // Update when bulk prediction changes
+  useEffect(() => {
+    if (bulkPrediction) {
+      setHomeScore(bulkPrediction.homeScore.toString());
+      setAwayScore(bulkPrediction.awayScore.toString());
+    }
+  }, [bulkPrediction]);
 
   // Update time every minute
   useEffect(() => {
@@ -709,12 +777,29 @@ const MatchPredictionCard = ({ match, prediction, pouleId, userId, onSave }: Mat
           </div>
         </div>
 
-        {/* Save Button */}
+        {/* Action Buttons */}
         {canPredict && (
-          <div className="mt-4">
+          <div className="mt-4 flex gap-2">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="icon"
+                    onClick={() => setShowAIPrediction(true)}
+                  >
+                    <Brain className="w-4 h-4 text-primary" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>AI voorspelling</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            
             <Button 
               variant="default" 
-              className="w-full"
+              className="flex-1"
               onClick={savePrediction}
               disabled={isSaving || homeScore === "" || awayScore === ""}
             >
@@ -727,6 +812,20 @@ const MatchPredictionCard = ({ match, prediction, pouleId, userId, onSave }: Mat
             </Button>
           </div>
         )}
+
+        {/* AI Prediction Modal */}
+        <AIPredictionModal
+          isOpen={showAIPrediction}
+          onClose={() => setShowAIPrediction(false)}
+          homeTeam={match.home_team}
+          awayTeam={match.away_team}
+          phase={match.phase}
+          kickoffTime={match.kickoff_time}
+          onApplyPrediction={(h, a) => {
+            setHomeScore(h.toString());
+            setAwayScore(a.toString());
+          }}
+        />
 
         {/* Locked Message */}
         {isLocked && !prediction && userId && (
