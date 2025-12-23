@@ -7,11 +7,14 @@ import Footer from "@/components/layout/Footer";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Calendar, Filter, Trophy, Clock, Check, X, LogIn, Loader2, Bell, BellOff } from "lucide-react";
+import { Calendar, Filter, Trophy, Clock, Check, X, LogIn, Loader2, Bell, BellOff, Star, StarOff } from "lucide-react";
 import { format, parseISO, isBefore, differenceInSeconds, differenceInMinutes } from "date-fns";
 import { nl } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 // Countdown hook for upcoming matches
 const useCountdown = (targetDate: Date) => {
@@ -179,9 +182,19 @@ const FlagImage = ({ teamName, size = "sm" }: { teamName: string | null; size?: 
   );
 };
 
+// Get all unique country names from COUNTRY_CODES
+const ALL_COUNTRIES = Object.keys(COUNTRY_CODES).filter(
+  name => !["VS", "USA"].includes(name) // Remove duplicates
+).sort((a, b) => a.localeCompare(b, 'nl'));
+
 const Matches = () => {
   const [selectedPhase, setSelectedPhase] = useState("Alle fases");
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [favoriteCountries, setFavoriteCountries] = useState<string[]>(() => {
+    const saved = localStorage.getItem("favoriteCountries");
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [showOnlyFavorites, setShowOnlyFavorites] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(() => {
     return localStorage.getItem("matchNotifications") === "true";
   });
@@ -189,6 +202,24 @@ const Matches = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // Toggle favorite country
+  const toggleFavorite = (country: string) => {
+    setFavoriteCountries(prev => {
+      const newFavorites = prev.includes(country)
+        ? prev.filter(c => c !== country)
+        : [...prev, country];
+      localStorage.setItem("favoriteCountries", JSON.stringify(newFavorites));
+      return newFavorites;
+    });
+  };
+
+  // Clear all favorites
+  const clearFavorites = () => {
+    setFavoriteCountries([]);
+    localStorage.setItem("favoriteCountries", JSON.stringify([]));
+    setShowOnlyFavorites(false);
+  };
 
   // Play notification sound
   const playNotificationSound = useCallback(() => {
@@ -323,9 +354,15 @@ const Matches = () => {
       const matchDate = format(parseISO(match.kickoff_time), "yyyy-MM-dd");
       const phaseMatch = selectedPhase === "Alle fases" || match.phase === selectedPhase;
       const dateMatch = !selectedDate || matchDate === selectedDate;
-      return phaseMatch && dateMatch;
+      
+      // Favorite countries filter
+      const favoriteMatch = !showOnlyFavorites || favoriteCountries.length === 0 || 
+        favoriteCountries.includes(match.home_team) || 
+        favoriteCountries.includes(match.away_team);
+      
+      return phaseMatch && dateMatch && favoriteMatch;
     });
-  }, [matches, selectedPhase, selectedDate]);
+  }, [matches, selectedPhase, selectedDate, showOnlyFavorites, favoriteCountries]);
 
   const groupedMatches = useMemo(() => {
     const groups: Record<string, Match[]> = {};
@@ -430,7 +467,7 @@ const Matches = () => {
 
           {/* Filters */}
           <div className="glass-card rounded-2xl p-6 mb-8">
-            <div className="flex flex-col lg:flex-row gap-6">
+            <div className="flex flex-col gap-6">
               {/* Phase Filter */}
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-3">
@@ -452,24 +489,131 @@ const Matches = () => {
                 </div>
               </div>
 
-              {/* Date Filter */}
-              <div className="lg:w-64">
-                <div className="flex items-center gap-2 mb-3">
-                  <Calendar className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-sm font-medium text-muted-foreground">Filter op datum</span>
+              <div className="flex flex-col lg:flex-row gap-6">
+                {/* Date Filter */}
+                <div className="lg:w-64">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Calendar className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm font-medium text-muted-foreground">Filter op datum</span>
+                  </div>
+                  <select
+                    value={selectedDate || ""}
+                    onChange={(e) => setSelectedDate(e.target.value || null)}
+                    className="w-full px-4 py-2 rounded-lg bg-secondary border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                  >
+                    <option value="">Alle datums</option>
+                    {availableDates.map(date => (
+                      <option key={date} value={date}>
+                        {format(parseISO(date), "d MMMM yyyy", { locale: nl })}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-                <select
-                  value={selectedDate || ""}
-                  onChange={(e) => setSelectedDate(e.target.value || null)}
-                  className="w-full px-4 py-2 rounded-lg bg-secondary border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                >
-                  <option value="">Alle datums</option>
-                  {availableDates.map(date => (
-                    <option key={date} value={date}>
-                      {format(parseISO(date), "d MMMM yyyy", { locale: nl })}
-                    </option>
-                  ))}
-                </select>
+
+                {/* Favorite Countries Filter */}
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Star className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm font-medium text-muted-foreground">Favoriete landen</span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" size="sm" className="gap-2">
+                          <Star className="w-4 h-4" />
+                          Selecteer landen
+                          {favoriteCountries.length > 0 && (
+                            <span className="bg-primary text-primary-foreground text-xs px-1.5 py-0.5 rounded-full">
+                              {favoriteCountries.length}
+                            </span>
+                          )}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-80 p-0" align="start">
+                        <div className="p-3 border-b border-border">
+                          <h4 className="font-medium text-sm">Kies je favoriete landen</h4>
+                          <p className="text-xs text-muted-foreground">
+                            Selecteer landen om hun wedstrijden te filteren
+                          </p>
+                        </div>
+                        <ScrollArea className="h-72">
+                          <div className="p-2 space-y-1">
+                            {ALL_COUNTRIES.map(country => (
+                              <label
+                                key={country}
+                                className="flex items-center gap-3 px-2 py-1.5 rounded-md hover:bg-secondary cursor-pointer"
+                              >
+                                <Checkbox
+                                  checked={favoriteCountries.includes(country)}
+                                  onCheckedChange={() => toggleFavorite(country)}
+                                />
+                                <FlagImage teamName={country} size="sm" />
+                                <span className="text-sm">{country}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </ScrollArea>
+                        {favoriteCountries.length > 0 && (
+                          <div className="p-2 border-t border-border">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="w-full text-muted-foreground"
+                              onClick={clearFavorites}
+                            >
+                              <X className="w-3 h-3 mr-2" />
+                              Alle favorieten wissen
+                            </Button>
+                          </div>
+                        )}
+                      </PopoverContent>
+                    </Popover>
+
+                    {/* Show selected favorites as chips */}
+                    {favoriteCountries.slice(0, 5).map(country => (
+                      <div
+                        key={country}
+                        className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-primary/10 border border-primary/20"
+                      >
+                        <FlagImage teamName={country} size="sm" />
+                        <span className="text-xs font-medium">{country}</span>
+                        <button
+                          onClick={() => toggleFavorite(country)}
+                          className="text-muted-foreground hover:text-foreground"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                    {favoriteCountries.length > 5 && (
+                      <span className="text-xs text-muted-foreground">
+                        +{favoriteCountries.length - 5} meer
+                      </span>
+                    )}
+
+                    {/* Toggle to show only favorites */}
+                    {favoriteCountries.length > 0 && (
+                      <Button
+                        variant={showOnlyFavorites ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setShowOnlyFavorites(!showOnlyFavorites)}
+                        className={showOnlyFavorites ? "glow-primary" : ""}
+                      >
+                        {showOnlyFavorites ? (
+                          <>
+                            <Star className="w-4 h-4 mr-1 fill-current" />
+                            Alleen favorieten
+                          </>
+                        ) : (
+                          <>
+                            <StarOff className="w-4 h-4 mr-1" />
+                            Toon alle landen
+                          </>
+                        )}
+                      </Button>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -478,14 +622,20 @@ const Matches = () => {
           <div className="flex items-center justify-between mb-6">
             <p className="text-muted-foreground">
               <span className="text-foreground font-semibold">{filteredMatches.length}</span> wedstrijden gevonden
+              {showOnlyFavorites && favoriteCountries.length > 0 && (
+                <span className="ml-2 text-primary">
+                  (favorieten: {favoriteCountries.join(", ")})
+                </span>
+              )}
             </p>
-            {(selectedPhase !== "Alle fases" || selectedDate) && (
+            {(selectedPhase !== "Alle fases" || selectedDate || showOnlyFavorites) && (
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => {
                   setSelectedPhase("Alle fases");
                   setSelectedDate(null);
+                  setShowOnlyFavorites(false);
                 }}
               >
                 Filters wissen
