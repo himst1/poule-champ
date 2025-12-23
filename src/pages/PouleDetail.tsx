@@ -24,6 +24,8 @@ import { MatchDeadlineBadge } from "@/components/DeadlineWarning";
 import { MatchdayOverview } from "@/components/MatchdayOverview";
 import TopscorerVoting from "@/components/TopscorerVoting";
 import WinnerVoting from "@/components/WinnerVoting";
+import { DeadlineNotificationBanner } from "@/components/DeadlineNotificationBanner";
+import { PushNotificationToggle } from "@/components/PushNotificationToggle";
 // Get all unique country names from COUNTRY_CODES (defined below)
 const ALL_COUNTRIES = [
   "Argentinië", "Australië", "Bahrein", "België", "Bolivia", "Brazilië",
@@ -678,6 +680,7 @@ const PouleDetail = () => {
                   <Eye className="w-4 h-4 mr-2" />
                   Overzicht
                 </Button>
+                <PushNotificationToggle userId={user?.id} />
                 {user?.id === poule.creator_id && members && (
                   <PouleManagement
                     pouleId={poule.id}
@@ -751,6 +754,15 @@ const PouleDetail = () => {
           {/* Tab Content */}
           {activeTab === "ranking" && (
             <div className="space-y-6">
+              {/* Deadline Notification Banner */}
+              {user && matches && predictions && (
+                <DeadlineNotificationBanner
+                  matches={matches}
+                  predictions={predictions}
+                  onNavigateToMatches={() => setActiveTab("matches")}
+                />
+              )}
+
               {/* Missing Predictions Warning */}
               {user && (!hasTopscorerPrediction || !hasWinnerPrediction) && (
                 <Card className="border-amber-500/50 bg-amber-500/10">
