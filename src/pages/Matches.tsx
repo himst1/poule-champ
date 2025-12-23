@@ -16,6 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AIPredictionModal } from "@/components/AIPredictionModal";
+import { BulkAIPredictionModal } from "@/components/BulkAIPredictionModal";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 // Countdown hook for upcoming matches
@@ -223,6 +224,19 @@ const Matches = () => {
     setShowOnlyFavorites(false);
   };
 
+  // Bulk AI prediction state
+  const [showBulkAIPrediction, setShowBulkAIPrediction] = useState(false);
+  const [bulkPredictions, setBulkPredictions] = useState<Record<string, { homeScore: number; awayScore: number }>>({});
+
+  // Handle bulk predictions applied
+  const handleBulkPredictionsApplied = (predictions: { matchId: string; homeScore: number; awayScore: number }[]) => {
+    const newBulkPredictions: Record<string, { homeScore: number; awayScore: number }> = {};
+    predictions.forEach(p => {
+      newBulkPredictions[p.matchId] = { homeScore: p.homeScore, awayScore: p.awayScore };
+    });
+    setBulkPredictions(newBulkPredictions);
+  };
+
   // Play notification sound
   const playNotificationSound = useCallback(() => {
     const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -366,6 +380,15 @@ const Matches = () => {
     });
   }, [matches, selectedPhase, selectedDate, showOnlyFavorites, favoriteCountries]);
 
+  // Get predictable matches (pending matches that haven't started yet)
+  const predictableMatches = useMemo(() => {
+    if (!matches) return [];
+    return matches.filter(match => {
+      const kickoffDate = parseISO(match.kickoff_time);
+      return match.status === "pending" && isBefore(new Date(), kickoffDate);
+    });
+  }, [matches]);
+
   const groupedMatches = useMemo(() => {
     const groups: Record<string, Match[]> = {};
     filteredMatches.forEach(match => {
@@ -429,16 +452,34 @@ const Matches = () => {
                     {predictedCount} van {totalMatches} wedstrijden voorspeld
                   </p>
                 </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-48 h-2 bg-secondary rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-gradient-to-r from-primary to-accent transition-all"
-                      style={{ width: `${totalMatches > 0 ? (predictedCount / totalMatches) * 100 : 0}%` }}
-                    />
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-48 h-2 bg-secondary rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-gradient-to-r from-primary to-accent transition-all"
+                        style={{ width: `${totalMatches > 0 ? (predictedCount / totalMatches) * 100 : 0}%` }}
+                      />
+                    </div>
+                    <span className="text-sm font-medium text-primary">
+                      {totalMatches > 0 ? Math.round((predictedCount / totalMatches) * 100) : 0}%
+                    </span>
                   </div>
-                  <span className="text-sm font-medium text-primary">
-                    {totalMatches > 0 ? Math.round((predictedCount / totalMatches) * 100) : 0}%
-                  </span>
+                  
+                  {/* Bulk AI Prediction Button */}
+                  {predictableMatches.length > 0 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowBulkAIPrediction(true)}
+                      className="gap-2"
+                    >
+                      <Brain className="w-4 h-4 text-primary" />
+                      Bulk AI
+                      <span className="bg-primary/10 text-primary text-xs px-1.5 py-0.5 rounded">
+                        {predictableMatches.length}
+                      </span>
+                    </Button>
+                  )}
                 </div>
               </div>
             </div>
@@ -674,6 +715,7 @@ const Matches = () => {
                         prediction={predictionMap[match.id]}
                         isLoggedIn={!!user}
                         userId={user?.id}
+                        bulkPrediction={bulkPredictions[match.id]}
                       />
                     ))}
                   </div>
@@ -693,6 +735,14 @@ const Matches = () => {
       </main>
 
       <Footer />
+
+      {/* Bulk AI Prediction Modal */}
+      <BulkAIPredictionModal
+        isOpen={showBulkAIPrediction}
+        onClose={() => setShowBulkAIPrediction(false)}
+        matches={predictableMatches}
+        onApplyPredictions={handleBulkPredictionsApplied}
+      />
     </div>
   );
 };
@@ -702,18 +752,36 @@ interface MatchRowProps {
   prediction?: Prediction;
   isLoggedIn: boolean;
   userId?: string;
+  bulkPrediction?: { homeScore: number; awayScore: number };
 }
 
-const MatchRow = ({ match, prediction, isLoggedIn, userId }: MatchRowProps) => {
+const MatchRow = ({ match, prediction, isLoggedIn, userId, bulkPrediction }: MatchRowProps) => {
   const kickoffDate = parseISO(match.kickoff_time);
   const isFinished = match.status === "finished";
   const isLive = match.status === "live";
   const canPredict = !isFinished && !isLive && isBefore(new Date(), kickoffDate);
   
-  const [homeScore, setHomeScore] = useState(prediction?.predicted_home_score?.toString() || "");
-  const [awayScore, setAwayScore] = useState(prediction?.predicted_away_score?.toString() || "");
+  // Initialize with bulk prediction if available
+  const [homeScore, setHomeScore] = useState(
+    bulkPrediction?.homeScore?.toString() || 
+    prediction?.predicted_home_score?.toString() || 
+    ""
+  );
+  const [awayScore, setAwayScore] = useState(
+    bulkPrediction?.awayScore?.toString() || 
+    prediction?.predicted_away_score?.toString() || 
+    ""
+  );
   const [isSaving, setIsSaving] = useState(false);
   const [showAIPrediction, setShowAIPrediction] = useState(false);
+  
+  // Update when bulk prediction changes
+  useEffect(() => {
+    if (bulkPrediction) {
+      setHomeScore(bulkPrediction.homeScore.toString());
+      setAwayScore(bulkPrediction.awayScore.toString());
+    }
+  }, [bulkPrediction]);
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
