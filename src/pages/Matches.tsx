@@ -7,7 +7,8 @@ import Footer from "@/components/layout/Footer";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Calendar, Filter, Trophy, Clock, Check, X, LogIn, Loader2, Bell, BellOff, Star, StarOff, Brain, Save } from "lucide-react";
+import { Calendar, Filter, Trophy, Clock, Check, X, LogIn, Loader2, Bell, BellOff, Star, StarOff, Brain, Save, Users } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format, parseISO, isBefore, differenceInSeconds, differenceInMinutes, addMinutes } from "date-fns";
 import { nl } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
@@ -202,10 +203,54 @@ const Matches = () => {
   const [notificationsEnabled, setNotificationsEnabled] = useState(() => {
     return localStorage.getItem("matchNotifications") === "true";
   });
+  const [selectedPouleId, setSelectedPouleId] = useState<string | null>(() => {
+    return localStorage.getItem("selectedPouleId");
+  });
   const notifiedMatchesRef = useRef<Set<string>>(new Set());
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // Fetch user's poules
+  const { data: userPoules } = useQuery({
+    queryKey: ["user-poules", user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      const { data, error } = await supabase
+        .from("poule_members")
+        .select(`
+          poule_id,
+          poules (
+            id,
+            name
+          )
+        `)
+        .eq("user_id", user.id);
+      
+      if (error) throw error;
+      return data?.map(d => d.poules).filter(Boolean) as { id: string; name: string }[] || [];
+    },
+    enabled: !!user,
+  });
+
+  // Auto-select first poule if none selected
+  useEffect(() => {
+    if (userPoules && userPoules.length > 0 && !selectedPouleId) {
+      const firstPouleId = userPoules[0].id;
+      setSelectedPouleId(firstPouleId);
+      localStorage.setItem("selectedPouleId", firstPouleId);
+    }
+  }, [userPoules, selectedPouleId]);
+
+  // Handle poule selection change
+  const handlePouleChange = (pouleId: string) => {
+    setSelectedPouleId(pouleId);
+    localStorage.setItem("selectedPouleId", pouleId);
+    // Clear local scores when switching poules
+    setLocalScores({});
+    setBulkPredictions({});
+    setAiGeneratedMatches(new Set());
+  };
 
   // Toggle favorite country - automatically enable filter when selecting
   const toggleFavorite = (country: string) => {
@@ -362,20 +407,21 @@ const Matches = () => {
     return () => clearInterval(interval);
   }, [notificationsEnabled, matches, playNotificationSound, toast]);
 
-  // Fetch user predictions (without poule filter for now - personal predictions)
+  // Fetch user predictions for selected poule
   const { data: predictions } = useQuery({
-    queryKey: ["predictions", user?.id],
+    queryKey: ["predictions", user?.id, selectedPouleId],
     queryFn: async () => {
-      if (!user) return [];
+      if (!user || !selectedPouleId) return [];
       const { data, error } = await supabase
         .from("predictions")
         .select("*")
-        .eq("user_id", user.id);
+        .eq("user_id", user.id)
+        .eq("poule_id", selectedPouleId);
       
       if (error) throw error;
       return data as Prediction[];
     },
-    enabled: !!user,
+    enabled: !!user && !!selectedPouleId,
   });
 
   const predictionMap = useMemo(() => {
@@ -455,7 +501,7 @@ const Matches = () => {
 
   // Save all unsaved predictions
   const saveAllPredictions = async () => {
-    if (!user || unsavedPredictions.length === 0) return;
+    if (!user || unsavedPredictions.length === 0 || !selectedPouleId) return;
     
     setIsSavingAll(true);
     try {
@@ -470,7 +516,7 @@ const Matches = () => {
             newPredictions.map(p => ({
               user_id: user.id,
               match_id: p.matchId,
-              poule_id: "00000000-0000-0000-0000-000000000000",
+              poule_id: selectedPouleId,
               predicted_home_score: p.homeScore,
               predicted_away_score: p.awayScore,
               is_ai_generated: p.isAiGenerated,
@@ -572,68 +618,102 @@ const Matches = () => {
           {user && (
             <>
               <div className="glass-card rounded-2xl p-6 mb-8">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <div>
-                    <h3 className="font-semibold text-lg mb-1">Jouw voorspellingen</h3>
-                    <p className="text-muted-foreground text-sm">
-                      {predictedCount} van {totalMatches} wedstrijden voorspeld
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-48 h-2 bg-secondary rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-gradient-to-r from-primary to-accent transition-all"
-                          style={{ width: `${totalMatches > 0 ? (predictedCount / totalMatches) * 100 : 0}%` }}
-                        />
-                      </div>
-                      <span className="text-sm font-medium text-primary">
-                        {totalMatches > 0 ? Math.round((predictedCount / totalMatches) * 100) : 0}%
-                      </span>
+                <div className="flex flex-col gap-4">
+                  {/* Poule Selector */}
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <Users className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-sm font-medium text-muted-foreground">Voorspellingen voor poule:</span>
                     </div>
-                    
-                    {/* Save All Button */}
-                    {unsavedPredictions.length > 0 && (
-                      <Button
-                        variant="default"
-                        size="sm"
-                        onClick={saveAllPredictions}
-                        disabled={isSavingAll}
-                        className="gap-2 glow-primary"
-                      >
-                        {isSavingAll ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Save className="w-4 h-4" />
-                        )}
-                        Sla alles op
-                        <span className="bg-primary-foreground/20 text-primary-foreground text-xs px-1.5 py-0.5 rounded">
-                          {unsavedPredictions.length}
-                        </span>
-                      </Button>
-                    )}
-                    
-                    {/* Bulk AI Prediction Button */}
-                    {predictableMatches.length > 0 && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setShowBulkAIPrediction(true)}
-                        className="gap-2"
-                      >
-                        <Brain className="w-4 h-4 text-primary" />
-                        Bulk AI
-                        <span className="bg-primary/10 text-primary text-xs px-1.5 py-0.5 rounded">
-                          {predictableMatches.length}
-                        </span>
-                      </Button>
+                    {userPoules && userPoules.length > 0 ? (
+                      <Select value={selectedPouleId || ""} onValueChange={handlePouleChange}>
+                        <SelectTrigger className="w-full sm:w-64">
+                          <SelectValue placeholder="Selecteer een poule" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {userPoules.map(poule => (
+                            <SelectItem key={poule.id} value={poule.id}>
+                              {poule.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-muted-foreground">Je bent nog geen lid van een poule.</span>
+                        <Button variant="outline" size="sm" onClick={() => navigate("/dashboard")}>
+                          Bekijk poules
+                        </Button>
+                      </div>
                     )}
                   </div>
+
+                  {/* Stats row */}
+                  {selectedPouleId && (
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pt-4 border-t border-border">
+                      <div>
+                        <h3 className="font-semibold text-lg mb-1">Jouw voorspellingen</h3>
+                        <p className="text-muted-foreground text-sm">
+                          {predictedCount} van {totalMatches} wedstrijden voorspeld
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-48 h-2 bg-secondary rounded-full overflow-hidden">
+                            <div 
+                              className="h-full bg-gradient-to-r from-primary to-accent transition-all"
+                              style={{ width: `${totalMatches > 0 ? (predictedCount / totalMatches) * 100 : 0}%` }}
+                            />
+                          </div>
+                          <span className="text-sm font-medium text-primary">
+                            {totalMatches > 0 ? Math.round((predictedCount / totalMatches) * 100) : 0}%
+                          </span>
+                        </div>
+                        
+                        {/* Save All Button */}
+                        {unsavedPredictions.length > 0 && (
+                          <Button
+                            variant="default"
+                            size="sm"
+                            onClick={saveAllPredictions}
+                            disabled={isSavingAll}
+                            className="gap-2 glow-primary"
+                          >
+                            {isSavingAll ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Save className="w-4 h-4" />
+                            )}
+                            Sla alles op
+                            <span className="bg-primary-foreground/20 text-primary-foreground text-xs px-1.5 py-0.5 rounded">
+                              {unsavedPredictions.length}
+                            </span>
+                          </Button>
+                        )}
+                        
+                        {/* Bulk AI Prediction Button */}
+                        {predictableMatches.length > 0 && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setShowBulkAIPrediction(true)}
+                            className="gap-2"
+                          >
+                            <Brain className="w-4 h-4 text-primary" />
+                            Bulk AI
+                            <span className="bg-primary/10 text-primary text-xs px-1.5 py-0.5 rounded">
+                              {predictableMatches.length}
+                            </span>
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
               
               {/* AI Prediction Stats */}
-              <AIPredictionStats />
+              {selectedPouleId && <AIPredictionStats pouleId={selectedPouleId} />}
             </>
           )}
 
@@ -867,6 +947,7 @@ const Matches = () => {
                         prediction={predictionMap[match.id]}
                         isLoggedIn={!!user}
                         userId={user?.id}
+                        pouleId={selectedPouleId}
                         bulkPrediction={bulkPredictions[match.id]}
                         onScoreChange={(home, away) => handleLocalScoreChange(match.id, home, away)}
                         onSave={() => {
@@ -919,16 +1000,17 @@ interface MatchRowProps {
   prediction?: Prediction;
   isLoggedIn: boolean;
   userId?: string;
+  pouleId?: string | null;
   bulkPrediction?: { homeScore: number; awayScore: number };
   onScoreChange?: (homeScore: string, awayScore: string) => void;
   onSave?: () => void;
 }
 
-const MatchRow = ({ match, prediction, isLoggedIn, userId, bulkPrediction, onScoreChange, onSave }: MatchRowProps) => {
+const MatchRow = ({ match, prediction, isLoggedIn, userId, pouleId, bulkPrediction, onScoreChange, onSave }: MatchRowProps) => {
   const kickoffDate = parseISO(match.kickoff_time);
   const isFinished = match.status === "finished";
   const isLive = match.status === "live";
-  const canPredict = !isFinished && !isLive && isBefore(new Date(), kickoffDate);
+  const canPredict = !isFinished && !isLive && isBefore(new Date(), kickoffDate) && !!pouleId;
   
   // Initialize with bulk prediction if available
   const [homeScore, setHomeScore] = useState(
@@ -969,7 +1051,7 @@ const MatchRow = ({ match, prediction, isLoggedIn, userId, bulkPrediction, onSco
   };
 
   const savePrediction = async () => {
-    if (!userId || homeScore === "" || awayScore === "") return;
+    if (!userId || homeScore === "" || awayScore === "" || !pouleId) return;
     
     setIsSaving(true);
     try {
@@ -979,7 +1061,7 @@ const MatchRow = ({ match, prediction, isLoggedIn, userId, bulkPrediction, onSco
           id: prediction?.id,
           user_id: userId,
           match_id: match.id,
-          poule_id: "00000000-0000-0000-0000-000000000000",
+          poule_id: pouleId,
           predicted_home_score: parseInt(homeScore),
           predicted_away_score: parseInt(awayScore),
           is_ai_generated: isAiGenerated,
