@@ -1,9 +1,18 @@
-import { Trophy, Menu, X } from "lucide-react";
+import { Trophy, Menu, X, LogOut, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { user, signOut, loading } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/");
+  };
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/50">
@@ -35,12 +44,27 @@ const Header = () => {
 
           {/* CTA Buttons */}
           <div className="hidden md:flex items-center gap-3">
-            <Button variant="ghost" size="sm">
-              Inloggen
-            </Button>
-            <Button variant="hero" size="sm">
-              Start Gratis
-            </Button>
+            {loading ? null : user ? (
+              <>
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary border border-border">
+                  <User className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">{user.user_metadata?.display_name || user.email?.split("@")[0]}</span>
+                </div>
+                <Button variant="ghost" size="sm" onClick={handleSignOut}>
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Uitloggen
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button variant="ghost" size="sm" onClick={() => navigate("/auth")}>
+                  Inloggen
+                </Button>
+                <Button variant="hero" size="sm" onClick={() => navigate("/auth")}>
+                  Start Gratis
+                </Button>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -66,12 +90,27 @@ const Header = () => {
                 Hoe werkt het
               </a>
               <div className="flex flex-col gap-2 pt-4 border-t border-border/50">
-                <Button variant="ghost" className="w-full justify-center">
-                  Inloggen
-                </Button>
-                <Button variant="hero" className="w-full justify-center">
-                  Start Gratis
-                </Button>
+                {user ? (
+                  <>
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-secondary">
+                      <User className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-sm font-medium">{user.user_metadata?.display_name || user.email?.split("@")[0]}</span>
+                    </div>
+                    <Button variant="ghost" className="w-full justify-center" onClick={handleSignOut}>
+                      <LogOut className="w-4 h-4 mr-2" />
+                      Uitloggen
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button variant="ghost" className="w-full justify-center" onClick={() => navigate("/auth")}>
+                      Inloggen
+                    </Button>
+                    <Button variant="hero" className="w-full justify-center" onClick={() => navigate("/auth")}>
+                      Start Gratis
+                    </Button>
+                  </>
+                )}
               </div>
             </nav>
           </div>
