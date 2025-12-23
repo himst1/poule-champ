@@ -5,11 +5,16 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// Scoring rules
-const EXACT_SCORE_POINTS = 5
-const CORRECT_RESULT_POINTS = 2
+// Default scoring rules (can be overridden per poule)
+const DEFAULT_EXACT_SCORE_POINTS = 5
+const DEFAULT_CORRECT_RESULT_POINTS = 2
 
 type MatchResult = 'home' | 'away' | 'draw'
+
+interface ScoringRules {
+  correct_score: number
+  correct_result: number
+}
 
 function getMatchResult(homeScore: number, awayScore: number): MatchResult {
   if (homeScore > awayScore) return 'home'
@@ -21,11 +26,12 @@ function calculatePoints(
   predictedHome: number,
   predictedAway: number,
   actualHome: number,
-  actualAway: number
+  actualAway: number,
+  scoringRules: ScoringRules
 ): number {
   // Exact score match
   if (predictedHome === actualHome && predictedAway === actualAway) {
-    return EXACT_SCORE_POINTS
+    return scoringRules.correct_score
   }
   
   // Correct result (winner or draw)
@@ -33,7 +39,7 @@ function calculatePoints(
   const actualResult = getMatchResult(actualHome, actualAway)
   
   if (predictedResult === actualResult) {
-    return CORRECT_RESULT_POINTS
+    return scoringRules.correct_result
   }
   
   return 0
@@ -57,7 +63,7 @@ Deno.serve(async (req) => {
     // Get all finished matches that have scores
     const { data: finishedMatches, error: matchError } = await supabase
       .from('matches')
-      .select('id, home_score, away_score')
+      .select('id, home_score, away_score, kickoff_time')
       .eq('status', 'finished')
       .not('home_score', 'is', null)
       .not('away_score', 'is', null)
@@ -78,7 +84,27 @@ Deno.serve(async (req) => {
 
     const matchIds = finishedMatches.map(m => m.id)
 
-    // Get all predictions for finished matches that haven't been scored yet
+    // Get all poules with their scoring rules
+    const { data: poules, error: poulesError } = await supabase
+      .from('poules')
+      .select('id, scoring_rules')
+
+    if (poulesError) {
+      console.error('Error fetching poules:', poulesError)
+      throw poulesError
+    }
+
+    // Create map of poule scoring rules
+    const pouleScoringRules: Record<string, ScoringRules> = {}
+    poules?.forEach(poule => {
+      const rules = poule.scoring_rules as ScoringRules | null
+      pouleScoringRules[poule.id] = {
+        correct_score: rules?.correct_score ?? DEFAULT_EXACT_SCORE_POINTS,
+        correct_result: rules?.correct_result ?? DEFAULT_CORRECT_RESULT_POINTS,
+      }
+    })
+
+    // Get all predictions for finished matches
     const { data: predictions, error: predError } = await supabase
       .from('predictions')
       .select('id, match_id, predicted_home_score, predicted_away_score, poule_id, user_id, points_earned')
@@ -99,27 +125,40 @@ Deno.serve(async (req) => {
     }
 
     // Create a map of match scores
-    const matchScores: Record<string, { home: number; away: number }> = {}
+    const matchScores: Record<string, { home: number; away: number; kickoff_time: string }> = {}
     finishedMatches.forEach(match => {
       matchScores[match.id] = {
         home: match.home_score!,
         away: match.away_score!,
+        kickoff_time: match.kickoff_time,
       }
     })
 
     // Calculate points for each prediction
     let updatedCount = 0
-    const pointsUpdates: Array<{ predictionId: string; points: number; userId: string; pouleId: string }> = []
+    const pointsUpdates: Array<{ 
+      predictionId: string; 
+      points: number; 
+      userId: string; 
+      pouleId: string;
+      matchId: string;
+    }> = []
 
     for (const prediction of predictions) {
       const matchScore = matchScores[prediction.match_id]
       if (!matchScore) continue
 
+      const scoringRules = pouleScoringRules[prediction.poule_id] || {
+        correct_score: DEFAULT_EXACT_SCORE_POINTS,
+        correct_result: DEFAULT_CORRECT_RESULT_POINTS,
+      }
+
       const points = calculatePoints(
         prediction.predicted_home_score,
         prediction.predicted_away_score,
         matchScore.home,
-        matchScore.away
+        matchScore.away,
+        scoringRules
       )
 
       // Only update if points haven't been calculated yet or changed
@@ -129,6 +168,7 @@ Deno.serve(async (req) => {
           points,
           userId: prediction.user_id,
           pouleId: prediction.poule_id,
+          matchId: prediction.match_id,
         })
       }
     }
@@ -149,18 +189,23 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Recalculate total points for all poule members
-    // Group updates by poule and user
-    const memberUpdates: Record<string, Record<string, number>> = {}
-    
-    // Get all poule members
+    // Recalculate total points and rankings for all poule members
     const pouleIds = [...new Set(pointsUpdates.map(u => u.pouleId))]
     
     for (const pouleId of pouleIds) {
-      // Get all predictions for this poule
+      // Get all predictions for this poule with match kickoff times for tie-breaking
       const { data: poulePredictions, error: pouleError } = await supabase
         .from('predictions')
-        .select('user_id, points_earned')
+        .select(`
+          user_id, 
+          points_earned,
+          match_id,
+          matches!inner (
+            kickoff_time,
+            home_score,
+            away_score
+          )
+        `)
         .eq('poule_id', pouleId)
         .not('points_earned', 'is', null)
 
@@ -169,18 +214,51 @@ Deno.serve(async (req) => {
         continue
       }
 
-      // Calculate total points per user
-      const userPoints: Record<string, number> = {}
+      // Calculate total points and tie-breaking stats per user
+      const userStats: Record<string, { 
+        totalPoints: number;
+        exactScores: number;
+        correctResults: number;
+        earliestPrediction: string;
+      }> = {}
+
       poulePredictions?.forEach(p => {
-        if (!userPoints[p.user_id]) userPoints[p.user_id] = 0
-        userPoints[p.user_id] += p.points_earned || 0
+        if (!userStats[p.user_id]) {
+          userStats[p.user_id] = { 
+            totalPoints: 0, 
+            exactScores: 0, 
+            correctResults: 0,
+            earliestPrediction: '9999-12-31',
+          }
+        }
+        
+        const points = p.points_earned || 0
+        userStats[p.user_id].totalPoints += points
+
+        const match = p.matches as any
+        const scoringRules = pouleScoringRules[pouleId] || {
+          correct_score: DEFAULT_EXACT_SCORE_POINTS,
+          correct_result: DEFAULT_CORRECT_RESULT_POINTS,
+        }
+        
+        // Track exact scores and correct results for tie-breaking
+        if (points === scoringRules.correct_score) {
+          userStats[p.user_id].exactScores += 1
+        } else if (points === scoringRules.correct_result) {
+          userStats[p.user_id].correctResults += 1
+        }
+
+        // Track earliest prediction for final tie-break
+        if (match?.kickoff_time && match.kickoff_time < userStats[p.user_id].earliestPrediction) {
+          userStats[p.user_id].earliestPrediction = match.kickoff_time
+        }
       })
 
-      // Update poule members
-      for (const [userId, totalPoints] of Object.entries(userPoints)) {
+      // Update poule members with new points
+      for (const [userId, stats] of Object.entries(userStats)) {
         const { error: memberError } = await supabase
           .from('poule_members')
-          .update({ points: totalPoints })
+          .update({ points: stats.totalPoints })
           .eq('poule_id', pouleId)
           .eq('user_id', userId)
 
@@ -189,29 +267,57 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Calculate and update ranks
+      // Calculate and update ranks with tie-breaking
+      // Tie-breaking rules:
+      // 1. Total points (descending)
+      // 2. Number of exact scores (descending)
+      // 3. Number of correct results (descending)
+      // 4. Alphabetical by display name (ascending)
+      
       const { data: members, error: rankError } = await supabase
         .from('poule_members')
-        .select('id, user_id, points')
+        .select('id, user_id, points, profiles(display_name)')
         .eq('poule_id', pouleId)
-        .order('points', { ascending: false })
 
       if (!rankError && members) {
-        let currentRank = 1
-        let previousPoints = -1
-        let sameRankCount = 0
+        // Enrich members with tie-breaking data
+        const enrichedMembers = members.map(m => ({
+          ...m,
+          exactScores: userStats[m.user_id]?.exactScores || 0,
+          correctResults: userStats[m.user_id]?.correctResults || 0,
+          displayName: (m.profiles as any)?.display_name || 'zzz',
+        }))
 
-        for (let i = 0; i < members.length; i++) {
-          const member = members[i]
+        // Sort by tie-breaking rules
+        enrichedMembers.sort((a, b) => {
+          // 1. Total points (descending)
+          if (b.points !== a.points) return b.points - a.points
           
-          if (member.points === previousPoints) {
-            sameRankCount++
+          // 2. Exact scores (descending)
+          if (b.exactScores !== a.exactScores) return b.exactScores - a.exactScores
+          
+          // 3. Correct results (descending)
+          if (b.correctResults !== a.correctResults) return b.correctResults - a.correctResults
+          
+          // 4. Alphabetical (ascending)
+          return a.displayName.localeCompare(b.displayName)
+        })
+
+        // Assign ranks (same points+tiebreakers = same rank)
+        let currentRank = 1
+        for (let i = 0; i < enrichedMembers.length; i++) {
+          const member = enrichedMembers[i]
+          const prevMember = i > 0 ? enrichedMembers[i - 1] : null
+          
+          // Only assign same rank if all tie-breakers are equal
+          if (prevMember && 
+              member.points === prevMember.points &&
+              member.exactScores === prevMember.exactScores &&
+              member.correctResults === prevMember.correctResults) {
+            // Same rank as previous
           } else {
             currentRank = i + 1
-            sameRankCount = 0
           }
-          
-          previousPoints = member.points
 
           await supabase
             .from('poule_members')
@@ -229,6 +335,7 @@ Deno.serve(async (req) => {
         message: `Points calculated successfully`,
         updated: updatedCount,
         matchesProcessed: finishedMatches.length,
+        poulesProcessed: pouleIds.length,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )

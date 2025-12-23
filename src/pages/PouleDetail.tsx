@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Trophy, Users, ArrowLeft, Share2, Copy, Check, Target, Loader2, Lock, Clock, Brain, Star, StarOff, Calendar, X, Save } from "lucide-react";
+import { Trophy, Users, ArrowLeft, Share2, Copy, Check, Target, Loader2, Lock, Clock, Brain, Star, StarOff, Calendar, X, Save, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,8 @@ import { AIPredictionStats } from "@/components/AIPredictionStats";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { PouleManagement } from "@/components/PouleManagement";
+import { MatchDeadlineBadge } from "@/components/DeadlineWarning";
 // Get all unique country names from COUNTRY_CODES (defined below)
 const ALL_COUNTRIES = [
   "Argentinië", "Australië", "Bahrein", "België", "Bolivia", "Brazilië",
@@ -188,6 +190,7 @@ type Poule = {
   status: "open" | "closed" | "finished";
   invite_code: string | null;
   creator_id: string;
+  scoring_rules: { correct_score: number; correct_result: number } | null;
 };
 
 type Member = {
@@ -302,7 +305,15 @@ const PouleDetail = () => {
         .maybeSingle();
       
       if (error) throw error;
-      return data as Poule | null;
+      if (!data) return null;
+      
+      // Parse scoring_rules from Json to our type
+      const scoringRules = data.scoring_rules as { correct_score: number; correct_result: number } | null;
+      
+      return {
+        ...data,
+        scoring_rules: scoringRules,
+      } as Poule;
     },
   });
 
@@ -594,6 +605,17 @@ const PouleDetail = () => {
                   {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                   {poule.invite_code}
                 </Button>
+                {user?.id === poule.creator_id && members && (
+                  <PouleManagement
+                    pouleId={poule.id}
+                    pouleName={poule.name}
+                    status={poule.status}
+                    scoringRules={poule.scoring_rules}
+                    isCreator={true}
+                    members={members}
+                    currentUserId={user?.id}
+                  />
+                )}
               </div>
             </div>
 
@@ -1101,10 +1123,9 @@ const MatchPredictionCard = ({ match, prediction, pouleId, userId, onSave, bulkP
         </div>
         <div className="flex items-center justify-center gap-2">
           {isLocked ? (
-            <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-destructive/20 text-destructive text-xs font-medium">
-              <Lock className="w-3.5 h-3.5" />
-              <span>Vergrendeld</span>
-            </div>
+            <MatchDeadlineBadge kickoffTime={match.kickoff_time} size="md" />
+          ) : minutesUntilLock <= 30 ? (
+            <MatchDeadlineBadge kickoffTime={lockTime.toISOString()} size="md" />
           ) : (
             <CountdownTimer kickoffDate={lockTime} />
           )}
