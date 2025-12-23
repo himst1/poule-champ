@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Trophy, Users, ArrowLeft, Share2, Copy, Check, Target, Loader2, Lock, Clock, Brain, Star, StarOff, Calendar, X, Save, Settings } from "lucide-react";
+import { Trophy, Users, ArrowLeft, Share2, Copy, Check, Target, Loader2, Lock, Clock, Brain, Star, StarOff, Calendar, X, Save, Settings, Goal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -193,6 +193,7 @@ type Poule = {
   invite_code: string | null;
   creator_id: string;
   scoring_rules: { correct_score: number; correct_result: number } | null;
+  deadline: string | null;
 };
 
 type Member = {
@@ -681,6 +682,7 @@ const PouleDetail = () => {
               { id: "ranking", label: "Ranking", icon: Trophy },
               { id: "matches", label: "Wedstrijden", icon: Target },
               { id: "predictions", label: "Mijn Voorspellingen", icon: Users },
+              { id: "topscorer", label: "Topscorer", icon: Goal },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -1014,6 +1016,10 @@ const PouleDetail = () => {
                 )}
               </div>
             </div>
+          )}
+
+          {activeTab === "topscorer" && (
+            <TopscorerVoting pouleId={id!} deadline={poule?.deadline} />
           )}
         </div>
       </main>
