@@ -13,6 +13,78 @@ import { useToast } from "@/hooks/use-toast";
 import { format, parseISO, isBefore, addMinutes, differenceInMinutes } from "date-fns";
 import { nl } from "date-fns/locale";
 
+// Team name to ISO country code mapping for WK 2026
+const COUNTRY_CODES: Record<string, string> = {
+  // Group A - North America
+  "Verenigde Staten": "us", "VS": "us", "USA": "us",
+  "Mexico": "mx", "Canada": "ca",
+  // Europe
+  "Nederland": "nl", "Duitsland": "de", "Frankrijk": "fr", "Spanje": "es",
+  "Engeland": "gb-eng", "Italië": "it", "Portugal": "pt", "België": "be",
+  "Kroatië": "hr", "Zwitserland": "ch", "Denemarken": "dk", "Polen": "pl",
+  "Servië": "rs", "Oekraïne": "ua", "Oostenrijk": "at", "Tsjechië": "cz",
+  "Wales": "gb-wls", "Schotland": "gb-sct", "Zweden": "se", "Noorwegen": "no",
+  "Griekenland": "gr", "Turkije": "tr", "Roemenië": "ro", "Hongarije": "hu",
+  "Slowakije": "sk", "Slovenië": "si", "Finland": "fi", "Ierland": "ie",
+  // South America
+  "Brazilië": "br", "Argentinië": "ar", "Uruguay": "uy", "Colombia": "co",
+  "Chili": "cl", "Ecuador": "ec", "Peru": "pe", "Paraguay": "py",
+  "Venezuela": "ve", "Bolivia": "bo",
+  // Africa
+  "Marokko": "ma", "Senegal": "sn", "Ghana": "gh", "Kameroen": "cm",
+  "Nigeria": "ng", "Tunesië": "tn", "Egypte": "eg", "Algerije": "dz",
+  "Zuid-Afrika": "za", "Ivoorkust": "ci", "Mali": "ml",
+  // Asia
+  "Japan": "jp", "Zuid-Korea": "kr", "Australië": "au", "Saoedi-Arabië": "sa",
+  "Iran": "ir", "Qatar": "qa", "China": "cn", "Indonesië": "id",
+  "Bahrein": "bh", "Irak": "iq", "VAE": "ae", "Oman": "om", "Jordanië": "jo",
+  "Oezbekistan": "uz", "Thailand": "th", "Vietnam": "vn", "India": "in",
+  // CONCACAF
+  "Costa Rica": "cr", "Jamaica": "jm", "Honduras": "hn", "Panama": "pa",
+  "El Salvador": "sv", "Guatemala": "gt", "Trinidad en Tobago": "tt",
+  // Oceania
+  "Nieuw-Zeeland": "nz",
+};
+
+// Get flag image URL from Flagcdn
+const getFlagUrl = (teamName: string | null): string | null => {
+  if (!teamName) return null;
+  const code = COUNTRY_CODES[teamName];
+  if (!code) return null;
+  return `https://flagcdn.com/w80/${code.toLowerCase()}.png`;
+};
+
+// Flag image component
+const FlagImage = ({ teamName, size = "md" }: { teamName: string | null; size?: "sm" | "md" | "lg" }) => {
+  const flagUrl = getFlagUrl(teamName);
+  
+  const sizeClasses = {
+    sm: "w-6 h-4",
+    md: "w-10 h-7",
+    lg: "w-12 h-8",
+  };
+  
+  if (!flagUrl) {
+    return (
+      <div className={`${sizeClasses[size]} bg-secondary rounded flex items-center justify-center`}>
+        <span className="text-muted-foreground text-xs">?</span>
+      </div>
+    );
+  }
+  
+  return (
+    <img
+      src={flagUrl}
+      alt={`Vlag van ${teamName}`}
+      className={`${sizeClasses[size]} object-cover rounded shadow-sm`}
+      onError={(e) => {
+        e.currentTarget.src = "";
+        e.currentTarget.className = `${sizeClasses[size]} bg-secondary rounded`;
+      }}
+    />
+  );
+};
+
 type Poule = {
   id: string;
   name: string;
@@ -508,12 +580,10 @@ const MatchPredictionCard = ({ match, prediction, pouleId, userId, onSave }: Mat
       
       {/* Match Content */}
       <div className="p-5">
-        <div className="grid grid-cols-[1fr_auto_1fr] gap-4 items-center">
+        <div className="grid grid-cols-[1fr_auto_1fr] gap-3 sm:gap-4 items-center">
           {/* Home Team */}
-          <div className="flex items-center gap-3">
-            <div className="text-4xl flex-shrink-0">
-              {match.home_flag || "🏳️"}
-            </div>
+          <div className="flex items-center gap-2 sm:gap-3">
+            <FlagImage teamName={match.home_team} size="lg" />
             <span className="font-display font-bold text-sm sm:text-base truncate">
               {match.home_team}
             </span>
@@ -529,31 +599,31 @@ const MatchPredictionCard = ({ match, prediction, pouleId, userId, onSave }: Mat
                   max="20"
                   value={homeScore}
                   onChange={(e) => setHomeScore(e.target.value)}
-                  className="w-14 h-12 text-center font-display font-bold text-xl bg-secondary border-border focus:border-primary"
+                  className="w-12 sm:w-14 h-11 sm:h-12 text-center font-display font-bold text-lg sm:text-xl bg-secondary border-border focus:border-primary"
                   placeholder="-"
                   disabled={isSaving}
                 />
-                <span className="text-muted-foreground font-bold text-xl">:</span>
+                <span className="text-muted-foreground font-bold text-lg sm:text-xl">:</span>
                 <Input
                   type="number"
                   min="0"
                   max="20"
                   value={awayScore}
                   onChange={(e) => setAwayScore(e.target.value)}
-                  className="w-14 h-12 text-center font-display font-bold text-xl bg-secondary border-border focus:border-primary"
+                  className="w-12 sm:w-14 h-11 sm:h-12 text-center font-display font-bold text-lg sm:text-xl bg-secondary border-border focus:border-primary"
                   placeholder="-"
                   disabled={isSaving}
                 />
               </>
             ) : prediction ? (
-              <div className="px-4 py-2 rounded-lg bg-primary/20 border border-primary/30">
-                <span className="font-display font-bold text-xl text-primary">
+              <div className="px-3 sm:px-4 py-2 rounded-lg bg-primary/20 border border-primary/30">
+                <span className="font-display font-bold text-lg sm:text-xl text-primary">
                   {prediction.predicted_home_score} : {prediction.predicted_away_score}
                 </span>
               </div>
             ) : (
-              <div className="px-4 py-2 rounded-lg bg-destructive/10 border border-destructive/30">
-                <span className="font-display font-bold text-sm text-destructive">
+              <div className="px-2 sm:px-4 py-2 rounded-lg bg-destructive/10 border border-destructive/30">
+                <span className="font-display font-bold text-xs sm:text-sm text-destructive whitespace-nowrap">
                   Niet ingevuld
                 </span>
               </div>
@@ -561,13 +631,11 @@ const MatchPredictionCard = ({ match, prediction, pouleId, userId, onSave }: Mat
           </div>
 
           {/* Away Team */}
-          <div className="flex items-center justify-end gap-3">
+          <div className="flex items-center justify-end gap-2 sm:gap-3">
             <span className="font-display font-bold text-sm sm:text-base truncate text-right">
               {match.away_team}
             </span>
-            <div className="text-4xl flex-shrink-0">
-              {match.away_flag || "🏳️"}
-            </div>
+            <FlagImage teamName={match.away_team} size="lg" />
           </div>
         </div>
 
