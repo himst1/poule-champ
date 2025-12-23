@@ -20,6 +20,7 @@ import { AIPredictionModal } from "@/components/AIPredictionModal";
 import { BulkAIPredictionModal } from "@/components/BulkAIPredictionModal";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { AIPredictionStats } from "@/components/AIPredictionStats";
+import { AIPredictionChart } from "@/components/AIPredictionChart";
 
 // Countdown hook for upcoming matches
 const useCountdown = (targetDate: Date) => {
@@ -714,6 +715,9 @@ const Matches = () => {
               
               {/* AI Prediction Stats */}
               {selectedPouleId && <AIPredictionStats pouleId={selectedPouleId} />}
+              
+              {/* AI Prediction Chart */}
+              {selectedPouleId && <AIPredictionChart pouleId={selectedPouleId} />}
             </>
           )}
 
