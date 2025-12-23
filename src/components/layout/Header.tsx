@@ -44,6 +44,12 @@ const Header = () => {
             >
               Wedstrijden
             </a>
+            <a 
+              href="/players" 
+              className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 rounded-lg transition-all"
+            >
+              Spelers
+            </a>
             
             {user && (
               <>
@@ -151,6 +157,13 @@ const Header = () => {
                 onClick={() => setIsMenuOpen(false)}
               >
                 Wedstrijden
+              </a>
+              <a 
+                href="/players" 
+                className="px-4 py-3 text-muted-foreground hover:text-foreground hover:bg-secondary/50 rounded-lg transition-all"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Spelers
               </a>
               {user && (
                 <>

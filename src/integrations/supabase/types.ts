@@ -107,6 +107,51 @@ export type Database = {
           },
         ]
       }
+      players: {
+        Row: {
+          club: string | null
+          country: string
+          country_flag: string | null
+          created_at: string
+          date_of_birth: string | null
+          goals: number
+          id: string
+          image_url: string | null
+          jersey_number: number | null
+          name: string
+          position: string
+          updated_at: string
+        }
+        Insert: {
+          club?: string | null
+          country: string
+          country_flag?: string | null
+          created_at?: string
+          date_of_birth?: string | null
+          goals?: number
+          id?: string
+          image_url?: string | null
+          jersey_number?: number | null
+          name: string
+          position: string
+          updated_at?: string
+        }
+        Update: {
+          club?: string | null
+          country?: string
+          country_flag?: string | null
+          created_at?: string
+          date_of_birth?: string | null
+          goals?: number
+          id?: string
+          image_url?: string | null
+          jersey_number?: number | null
+          name?: string
+          position?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       poule_members: {
         Row: {
           id: string
@@ -334,11 +379,84 @@ export type Database = {
           },
         ]
       }
+      topscorer_predictions: {
+        Row: {
+          created_at: string
+          id: string
+          player_id: string
+          points_earned: number
+          poule_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          player_id: string
+          points_earned?: number
+          poule_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          player_id?: string
+          points_earned?: number
+          poule_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "topscorer_predictions_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "topscorer_predictions_poule_id_fkey"
+            columns: ["poule_id"]
+            isOneToOne: false
+            referencedRelation: "poules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       is_poule_creator: {
         Args: { _poule_id: string; _user_id: string }
         Returns: boolean
@@ -349,6 +467,7 @@ export type Database = {
       }
     }
     Enums: {
+      app_role: "admin" | "moderator" | "user"
       match_status: "pending" | "live" | "finished"
       payment_status: "pending" | "succeeded" | "failed" | "refunded"
       poule_status: "open" | "closed" | "finished"
@@ -479,6 +598,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_role: ["admin", "moderator", "user"],
       match_status: ["pending", "live", "finished"],
       payment_status: ["pending", "succeeded", "failed", "refunded"],
       poule_status: ["open", "closed", "finished"],
