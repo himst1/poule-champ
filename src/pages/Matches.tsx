@@ -7,8 +7,8 @@ import Footer from "@/components/layout/Footer";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Calendar, Filter, Trophy, Clock, Check, X, LogIn, Loader2, Bell, BellOff, Star, StarOff, Brain } from "lucide-react";
-import { format, parseISO, isBefore, differenceInSeconds, differenceInMinutes } from "date-fns";
+import { Calendar, Filter, Trophy, Clock, Check, X, LogIn, Loader2, Bell, BellOff, Star, StarOff, Brain, Save } from "lucide-react";
+import { format, parseISO, isBefore, differenceInSeconds, differenceInMinutes, addMinutes } from "date-fns";
 import { nl } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
@@ -237,14 +237,32 @@ const Matches = () => {
   // Bulk AI prediction state
   const [showBulkAIPrediction, setShowBulkAIPrediction] = useState(false);
   const [bulkPredictions, setBulkPredictions] = useState<Record<string, { homeScore: number; awayScore: number }>>({});
+  const [localScores, setLocalScores] = useState<Record<string, { homeScore: string; awayScore: string }>>({});
+  const [aiGeneratedMatches, setAiGeneratedMatches] = useState<Set<string>>(new Set());
+  const [isSavingAll, setIsSavingAll] = useState(false);
+  const queryClient = useQueryClient();
+
+  // Handle local score changes from MatchRow
+  const handleLocalScoreChange = useCallback((matchId: string, homeScore: string, awayScore: string) => {
+    setLocalScores(prev => ({
+      ...prev,
+      [matchId]: { homeScore, awayScore }
+    }));
+  }, []);
 
   // Handle bulk predictions applied
   const handleBulkPredictionsApplied = (predictions: { matchId: string; homeScore: number; awayScore: number }[]) => {
     const newBulkPredictions: Record<string, { homeScore: number; awayScore: number }> = {};
+    const newLocalScores: Record<string, { homeScore: string; awayScore: string }> = { ...localScores };
+    const newAiGenerated = new Set(aiGeneratedMatches);
     predictions.forEach(p => {
       newBulkPredictions[p.matchId] = { homeScore: p.homeScore, awayScore: p.awayScore };
+      newLocalScores[p.matchId] = { homeScore: p.homeScore.toString(), awayScore: p.awayScore.toString() };
+      newAiGenerated.add(p.matchId);
     });
     setBulkPredictions(newBulkPredictions);
+    setLocalScores(newLocalScores);
+    setAiGeneratedMatches(newAiGenerated);
   };
 
   // Play notification sound
@@ -401,6 +419,101 @@ const Matches = () => {
     });
   }, [matches]);
 
+  // Get all unsaved predictions
+  const unsavedPredictions = useMemo(() => {
+    const unsaved: { matchId: string; homeScore: number; awayScore: number; isAiGenerated: boolean; existingId?: string }[] = [];
+    
+    Object.entries(localScores).forEach(([matchId, scores]) => {
+      if (scores.homeScore === "" || scores.awayScore === "") return;
+      
+      const match = predictableMatches.find(m => m.id === matchId);
+      if (!match) return;
+      
+      // Check if match is still open for predictions
+      const kickoffDate = parseISO(match.kickoff_time);
+      if (!isBefore(new Date(), kickoffDate)) return;
+      
+      const existingPrediction = predictionMap[matchId];
+      const homeScore = parseInt(scores.homeScore);
+      const awayScore = parseInt(scores.awayScore);
+      const isAiGenerated = aiGeneratedMatches.has(matchId);
+      
+      // Only add if it's new or different from existing
+      if (!existingPrediction) {
+        unsaved.push({ matchId, homeScore, awayScore, isAiGenerated });
+      } else if (
+        existingPrediction.predicted_home_score !== homeScore ||
+        existingPrediction.predicted_away_score !== awayScore
+      ) {
+        unsaved.push({ matchId, homeScore, awayScore, isAiGenerated, existingId: existingPrediction.id });
+      }
+    });
+    
+    return unsaved;
+  }, [localScores, predictableMatches, predictionMap, aiGeneratedMatches]);
+
+  // Save all unsaved predictions
+  const saveAllPredictions = async () => {
+    if (!user || unsavedPredictions.length === 0) return;
+    
+    setIsSavingAll(true);
+    try {
+      const newPredictions = unsavedPredictions.filter(p => !p.existingId);
+      const updates = unsavedPredictions.filter(p => p.existingId);
+      
+      // Insert new predictions
+      if (newPredictions.length > 0) {
+        const { error: insertError } = await supabase
+          .from("predictions")
+          .insert(
+            newPredictions.map(p => ({
+              user_id: user.id,
+              match_id: p.matchId,
+              poule_id: "00000000-0000-0000-0000-000000000000",
+              predicted_home_score: p.homeScore,
+              predicted_away_score: p.awayScore,
+              is_ai_generated: p.isAiGenerated,
+            }))
+          );
+        
+        if (insertError) throw insertError;
+      }
+      
+      // Update existing predictions
+      for (const update of updates) {
+        const { error: updateError } = await supabase
+          .from("predictions")
+          .update({
+            predicted_home_score: update.homeScore,
+            predicted_away_score: update.awayScore,
+            is_ai_generated: update.isAiGenerated,
+          })
+          .eq("id", update.existingId);
+        
+        if (updateError) throw updateError;
+      }
+      
+      toast({
+        title: "Alle voorspellingen opgeslagen!",
+        description: `${unsavedPredictions.length} voorspelling${unsavedPredictions.length > 1 ? 'en' : ''} opgeslagen`,
+      });
+      
+      queryClient.invalidateQueries({ queryKey: ["predictions"] });
+      queryClient.invalidateQueries({ queryKey: ["ai-prediction-stats"] });
+      setLocalScores({});
+      setBulkPredictions({});
+      setAiGeneratedMatches(new Set());
+    } catch (error: any) {
+      toast({
+        title: "Fout bij opslaan",
+        description: error.message || "Probeer het opnieuw",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSavingAll(false);
+    }
+  };
+
   const groupedMatches = useMemo(() => {
     const groups: Record<string, Match[]> = {};
     filteredMatches.forEach(match => {
@@ -476,6 +589,27 @@ const Matches = () => {
                       {totalMatches > 0 ? Math.round((predictedCount / totalMatches) * 100) : 0}%
                     </span>
                   </div>
+                  
+                  {/* Save All Button */}
+                  {unsavedPredictions.length > 0 && (
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={saveAllPredictions}
+                      disabled={isSavingAll}
+                      className="gap-2 glow-primary"
+                    >
+                      {isSavingAll ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Save className="w-4 h-4" />
+                      )}
+                      Sla alles op
+                      <span className="bg-primary-foreground/20 text-primary-foreground text-xs px-1.5 py-0.5 rounded">
+                        {unsavedPredictions.length}
+                      </span>
+                    </Button>
+                  )}
                   
                   {/* Bulk AI Prediction Button */}
                   {predictableMatches.length > 0 && (
@@ -728,6 +862,21 @@ const Matches = () => {
                         isLoggedIn={!!user}
                         userId={user?.id}
                         bulkPrediction={bulkPredictions[match.id]}
+                        onScoreChange={(home, away) => handleLocalScoreChange(match.id, home, away)}
+                        onSave={() => {
+                          queryClient.invalidateQueries({ queryKey: ["predictions"] });
+                          queryClient.invalidateQueries({ queryKey: ["ai-prediction-stats"] });
+                          setLocalScores(prev => {
+                            const newScores = { ...prev };
+                            delete newScores[match.id];
+                            return newScores;
+                          });
+                          setAiGeneratedMatches(prev => {
+                            const newSet = new Set(prev);
+                            newSet.delete(match.id);
+                            return newSet;
+                          });
+                        }}
                       />
                     ))}
                   </div>
@@ -765,9 +914,11 @@ interface MatchRowProps {
   isLoggedIn: boolean;
   userId?: string;
   bulkPrediction?: { homeScore: number; awayScore: number };
+  onScoreChange?: (homeScore: string, awayScore: string) => void;
+  onSave?: () => void;
 }
 
-const MatchRow = ({ match, prediction, isLoggedIn, userId, bulkPrediction }: MatchRowProps) => {
+const MatchRow = ({ match, prediction, isLoggedIn, userId, bulkPrediction, onScoreChange, onSave }: MatchRowProps) => {
   const kickoffDate = parseISO(match.kickoff_time);
   const isFinished = match.status === "finished";
   const isLive = match.status === "live";
@@ -786,14 +937,21 @@ const MatchRow = ({ match, prediction, isLoggedIn, userId, bulkPrediction }: Mat
   );
   const [isSaving, setIsSaving] = useState(false);
   const [showAIPrediction, setShowAIPrediction] = useState(false);
+  const [isAiGenerated, setIsAiGenerated] = useState(false);
   
   // Update when bulk prediction changes
   useEffect(() => {
     if (bulkPrediction) {
       setHomeScore(bulkPrediction.homeScore.toString());
       setAwayScore(bulkPrediction.awayScore.toString());
+      setIsAiGenerated(true);
     }
   }, [bulkPrediction]);
+
+  // Notify parent of score changes
+  useEffect(() => {
+    onScoreChange?.(homeScore, awayScore);
+  }, [homeScore, awayScore, onScoreChange]);
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -801,6 +959,7 @@ const MatchRow = ({ match, prediction, isLoggedIn, userId, bulkPrediction }: Mat
   const handleApplyAIPrediction = (aiHomeScore: number, aiAwayScore: number) => {
     setHomeScore(aiHomeScore.toString());
     setAwayScore(aiAwayScore.toString());
+    setIsAiGenerated(true);
   };
 
   const savePrediction = async () => {
@@ -817,6 +976,7 @@ const MatchRow = ({ match, prediction, isLoggedIn, userId, bulkPrediction }: Mat
           poule_id: "00000000-0000-0000-0000-000000000000",
           predicted_home_score: parseInt(homeScore),
           predicted_away_score: parseInt(awayScore),
+          is_ai_generated: isAiGenerated,
         }, {
           onConflict: "id"
         });
@@ -828,7 +988,8 @@ const MatchRow = ({ match, prediction, isLoggedIn, userId, bulkPrediction }: Mat
         description: `${match.home_team} ${homeScore} - ${awayScore} ${match.away_team}`,
       });
       
-      queryClient.invalidateQueries({ queryKey: ["predictions"] });
+      onSave?.();
+      setIsAiGenerated(false);
     } catch (error: any) {
       toast({
         title: "Fout",
