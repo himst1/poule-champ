@@ -12,6 +12,7 @@ import PouleManagement from "./pages/PouleManagement";
 import Matches from "./pages/Matches";
 import AdminMatches from "./pages/AdminMatches";
 import Auth from "./pages/Auth";
+import Guide from "./pages/Guide";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -32,6 +33,7 @@ const App = () => (
             <Route path="/poule-management" element={<PouleManagement />} />
             <Route path="/matches" element={<Matches />} />
             <Route path="/admin/matches" element={<AdminMatches />} />
+            <Route path="/handleiding" element={<Guide />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

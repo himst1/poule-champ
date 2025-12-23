@@ -1,4 +1,5 @@
-import { UserPlus, Target, Trophy } from "lucide-react";
+import { UserPlus, Target, Trophy, BookOpen } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 const steps = [
   {
@@ -31,9 +32,13 @@ const HowItWorksSection = () => {
           <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold mt-4 mb-6">
             In 3 stappen naar je poule
           </h2>
-          <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
+          <p className="text-muted-foreground max-w-2xl mx-auto text-lg mb-6">
             Simpel, snel, en zonder gedoe. In minder dan 5 minuten is je poule live.
           </p>
+          <Button variant="outline" size="lg" className="gap-2" onClick={() => window.location.href = "/handleiding"}>
+            <BookOpen className="w-5 h-5" />
+            Bekijk de volledige handleiding
+          </Button>
         </div>
 
         {/* Steps */}
