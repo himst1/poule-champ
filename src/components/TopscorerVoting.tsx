@@ -18,14 +18,15 @@ import { toast } from "sonner";
 import { format, isBefore } from "date-fns";
 import { nl } from "date-fns/locale";
 
-interface Player {
+interface WKPlayer {
   id: string;
   name: string;
   country: string;
   country_flag: string | null;
   position: string;
+  age: number;
+  international_caps: number;
   goals: number;
-  jersey_number: number | null;
 }
 
 interface TopscorerPrediction {
@@ -34,7 +35,7 @@ interface TopscorerPrediction {
   player_id: string;
   points_earned: number;
   created_at: string;
-  player?: Player;
+  player?: WKPlayer;
 }
 
 interface Profile {
@@ -76,17 +77,17 @@ const TopscorerVoting = ({ pouleId, deadline }: TopscorerVotingProps) => {
     ? isBefore(new Date(effectiveDeadline), new Date()) 
     : false;
 
-  // Fetch all players
+  // Fetch all WK players
   const { data: players } = useQuery({
-    queryKey: ["players-for-voting"],
+    queryKey: ["wk-players-for-voting"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("players")
+        .from("wk_players")
         .select("*")
         .order("goals", { ascending: false })
         .order("name");
       if (error) throw error;
-      return data as Player[];
+      return data as WKPlayer[];
     },
   });
 
@@ -97,7 +98,7 @@ const TopscorerVoting = ({ pouleId, deadline }: TopscorerVotingProps) => {
       if (!user) return null;
       const { data, error } = await supabase
         .from("topscorer_predictions")
-        .select("*, player:players(*)")
+        .select("*, player:wk_players(*)")
         .eq("poule_id", pouleId)
         .eq("user_id", user.id)
         .maybeSingle();
@@ -113,7 +114,7 @@ const TopscorerVoting = ({ pouleId, deadline }: TopscorerVotingProps) => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("topscorer_predictions")
-        .select("*, player:players(*)")
+        .select("*, player:wk_players(*)")
         .eq("poule_id", pouleId);
       if (error) throw error;
       return data as TopscorerPrediction[];
@@ -238,13 +239,8 @@ const TopscorerVoting = ({ pouleId, deadline }: TopscorerVotingProps) => {
                 {myPrediction.player.country_flag || "⚽"}
               </div>
               <div className="flex-1">
-                <div className="flex items-center gap-2">
-                  {myPrediction.player.jersey_number && (
-                    <span className="text-xs font-bold text-primary">#{myPrediction.player.jersey_number}</span>
-                  )}
-                  <span className="font-semibold">{myPrediction.player.name}</span>
-                </div>
-                <span className="text-sm text-muted-foreground">{myPrediction.player.country}</span>
+                <span className="font-semibold">{myPrediction.player.name}</span>
+                <span className="text-sm text-muted-foreground block">{myPrediction.player.country}</span>
               </div>
               <div className="text-right">
                 <div className="flex items-center gap-1 text-primary font-bold">
@@ -296,9 +292,6 @@ const TopscorerVoting = ({ pouleId, deadline }: TopscorerVotingProps) => {
                   <SelectItem key={player.id} value={player.id}>
                     <div className="flex items-center gap-2">
                       <span>{player.country_flag}</span>
-                      {player.jersey_number && (
-                        <span className="text-xs font-bold text-primary">#{player.jersey_number}</span>
-                      )}
                       <span>{player.name}</span>
                       <span className="text-muted-foreground">({player.goals} goals)</span>
                     </div>
