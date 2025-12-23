@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Trophy, Users, ArrowLeft, Share2, Copy, Check, Target, Loader2, Lock, Clock, Brain, Star, StarOff, Calendar, X, Save, Settings, Goal } from "lucide-react";
+import { Trophy, Users, ArrowLeft, Share2, Copy, Check, Target, Loader2, Lock, Clock, Brain, Star, StarOff, Calendar, X, Save, Settings, Goal, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -633,10 +633,18 @@ const PouleDetail = () => {
                   {pot > 0 && ` • €${pot} pot`}
                 </p>
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Button variant="outline" size="sm" onClick={copyInviteCode}>
                   {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                   {poule.invite_code}
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => navigate(`/poule/${id}/overzicht`)}
+                >
+                  <Eye className="w-4 h-4 mr-2" />
+                  Overzicht
                 </Button>
                 {user?.id === poule.creator_id && members && (
                   <PouleManagement
