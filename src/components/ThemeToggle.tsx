@@ -36,14 +36,23 @@ const ThemeToggle = () => {
       variant="ghost"
       size="icon"
       onClick={toggleTheme}
-      className="w-9 h-9"
+      className="w-9 h-9 relative overflow-hidden"
       aria-label={isDark ? "Schakel naar lichte modus" : "Schakel naar donkere modus"}
     >
-      {isDark ? (
-        <Sun className="w-5 h-5 text-muted-foreground hover:text-foreground transition-colors" />
-      ) : (
-        <Moon className="w-5 h-5 text-muted-foreground hover:text-foreground transition-colors" />
-      )}
+      <Sun 
+        className={`w-5 h-5 absolute transition-all duration-300 ${
+          isDark 
+            ? "rotate-0 scale-100 opacity-100" 
+            : "rotate-90 scale-0 opacity-0"
+        }`} 
+      />
+      <Moon 
+        className={`w-5 h-5 absolute transition-all duration-300 ${
+          isDark 
+            ? "-rotate-90 scale-0 opacity-0" 
+            : "rotate-0 scale-100 opacity-100"
+        }`} 
+      />
     </Button>
   );
 };
