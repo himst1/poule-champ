@@ -22,14 +22,14 @@ const Header = () => {
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-6">
+            <a href="/matches" className="text-muted-foreground hover:text-foreground transition-colors">
+              Wedstrijden
+            </a>
             <a href="#features" className="text-muted-foreground hover:text-foreground transition-colors">
               Features
             </a>
             <a href="#how-it-works" className="text-muted-foreground hover:text-foreground transition-colors">
               Hoe werkt het
-            </a>
-            <a href="#pricing" className="text-muted-foreground hover:text-foreground transition-colors">
-              Prijzen
             </a>
           </nav>
 
@@ -56,14 +56,14 @@ const Header = () => {
         {isMenuOpen && (
           <div className="md:hidden py-4 border-t border-border/50 animate-fade-in">
             <nav className="flex flex-col gap-4">
+              <a href="/matches" className="text-muted-foreground hover:text-foreground transition-colors">
+                Wedstrijden
+              </a>
               <a href="#features" className="text-muted-foreground hover:text-foreground transition-colors">
                 Features
               </a>
               <a href="#how-it-works" className="text-muted-foreground hover:text-foreground transition-colors">
                 Hoe werkt het
-              </a>
-              <a href="#pricing" className="text-muted-foreground hover:text-foreground transition-colors">
-                Prijzen
               </a>
               <div className="flex flex-col gap-2 pt-4 border-t border-border/50">
                 <Button variant="ghost" className="w-full justify-center">
