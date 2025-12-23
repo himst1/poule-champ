@@ -15,10 +15,10 @@ import { nl } from "date-fns/locale";
 import { BulkAIPredictionModal } from "@/components/BulkAIPredictionModal";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { AIPredictionModal } from "@/components/AIPredictionModal";
+import { AIPredictionStats } from "@/components/AIPredictionStats";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
-
 // Get all unique country names from COUNTRY_CODES (defined below)
 const ALL_COUNTRIES = [
   "Argentinië", "Australië", "Bahrein", "België", "Bolivia", "Brazilië",
@@ -221,6 +221,7 @@ type Prediction = {
   predicted_home_score: number;
   predicted_away_score: number;
   points_earned: number | null;
+  is_ai_generated?: boolean;
 };
 
 const PouleDetail = () => {
@@ -234,6 +235,7 @@ const PouleDetail = () => {
   const [showBulkAIPrediction, setShowBulkAIPrediction] = useState(false);
   const [bulkPredictions, setBulkPredictions] = useState<Record<string, { homeScore: number; awayScore: number }>>({});
   const [localScores, setLocalScores] = useState<Record<string, { homeScore: string; awayScore: string }>>({});
+  const [aiGeneratedMatches, setAiGeneratedMatches] = useState<Set<string>>(new Set());
   const [isSavingAll, setIsSavingAll] = useState(false);
   
   // Filter states
@@ -269,12 +271,15 @@ const PouleDetail = () => {
   const handleBulkPredictionsApplied = (predictions: { matchId: string; homeScore: number; awayScore: number }[]) => {
     const newBulkPredictions: Record<string, { homeScore: number; awayScore: number }> = {};
     const newLocalScores: Record<string, { homeScore: string; awayScore: string }> = { ...localScores };
+    const newAiGenerated = new Set(aiGeneratedMatches);
     predictions.forEach(p => {
       newBulkPredictions[p.matchId] = { homeScore: p.homeScore, awayScore: p.awayScore };
       newLocalScores[p.matchId] = { homeScore: p.homeScore.toString(), awayScore: p.awayScore.toString() };
+      newAiGenerated.add(p.matchId);
     });
     setBulkPredictions(newBulkPredictions);
     setLocalScores(newLocalScores);
+    setAiGeneratedMatches(newAiGenerated);
   };
 
   // Update local scores from child component
@@ -404,7 +409,7 @@ const PouleDetail = () => {
 
   // Get all unsaved predictions (local scores that differ from saved predictions)
   const unsavedPredictions = useMemo(() => {
-    const unsaved: { matchId: string; homeScore: number; awayScore: number; isNew: boolean }[] = [];
+    const unsaved: { matchId: string; homeScore: number; awayScore: number; isNew: boolean; isAiGenerated: boolean }[] = [];
     
     Object.entries(localScores).forEach(([matchId, scores]) => {
       if (scores.homeScore === "" || scores.awayScore === "") return;
@@ -420,20 +425,21 @@ const PouleDetail = () => {
       const existingPrediction = predictionMap[matchId];
       const homeScore = parseInt(scores.homeScore);
       const awayScore = parseInt(scores.awayScore);
+      const isAiGenerated = aiGeneratedMatches.has(matchId);
       
       // Only add if it's new or different from existing
       if (!existingPrediction) {
-        unsaved.push({ matchId, homeScore, awayScore, isNew: true });
+        unsaved.push({ matchId, homeScore, awayScore, isNew: true, isAiGenerated });
       } else if (
         existingPrediction.predicted_home_score !== homeScore ||
         existingPrediction.predicted_away_score !== awayScore
       ) {
-        unsaved.push({ matchId, homeScore, awayScore, isNew: false });
+        unsaved.push({ matchId, homeScore, awayScore, isNew: false, isAiGenerated });
       }
     });
     
     return unsaved;
-  }, [localScores, displayMatches, predictionMap]);
+  }, [localScores, displayMatches, predictionMap, aiGeneratedMatches]);
 
   // Save all unsaved predictions
   const saveAllPredictions = async () => {
@@ -455,6 +461,7 @@ const PouleDetail = () => {
               poule_id: id!,
               predicted_home_score: p.homeScore,
               predicted_away_score: p.awayScore,
+              is_ai_generated: p.isAiGenerated,
             }))
           );
         
@@ -470,6 +477,7 @@ const PouleDetail = () => {
             .update({
               predicted_home_score: update.homeScore,
               predicted_away_score: update.awayScore,
+              is_ai_generated: update.isAiGenerated,
             })
             .eq("id", existingPrediction.id);
           
@@ -483,8 +491,10 @@ const PouleDetail = () => {
       });
       
       queryClient.invalidateQueries({ queryKey: ["poule-predictions"] });
+      queryClient.invalidateQueries({ queryKey: ["ai-prediction-stats"] });
       setLocalScores({});
       setBulkPredictions({});
+      setAiGeneratedMatches(new Set());
     } catch (error: any) {
       toast({
         title: "Fout bij opslaan",
@@ -870,11 +880,18 @@ const PouleDetail = () => {
                     userId={user?.id}
                     onSave={() => {
                       queryClient.invalidateQueries({ queryKey: ["poule-predictions"] });
+                      queryClient.invalidateQueries({ queryKey: ["ai-prediction-stats"] });
                       // Clear local score for this match after individual save
                       setLocalScores(prev => {
                         const newScores = { ...prev };
                         delete newScores[match.id];
                         return newScores;
+                      });
+                      // Clear AI generated flag for this match
+                      setAiGeneratedMatches(prev => {
+                        const newSet = new Set(prev);
+                        newSet.delete(match.id);
+                        return newSet;
                       });
                     }}
                     bulkPrediction={bulkPredictions[match.id]}
@@ -895,29 +912,42 @@ const PouleDetail = () => {
           )}
 
           {activeTab === "predictions" && (
-            <div className="glass-card rounded-2xl p-6">
-              <h2 className="font-display font-bold text-lg mb-4">Jouw Voorspellingen</h2>
-              {predictions && predictions.length > 0 ? (
-                <div className="space-y-3">
-                  {predictions.map(pred => (
-                    <div key={pred.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
-                      <span className="text-sm">Match ID: {pred.match_id.slice(0, 8)}...</span>
-                      <span className="font-semibold">
-                        {pred.predicted_home_score} - {pred.predicted_away_score}
-                      </span>
-                      {pred.points_earned !== null && (
-                        <span className={`font-bold ${pred.points_earned > 0 ? "text-primary" : "text-muted-foreground"}`}>
-                          +{pred.points_earned} pts
+            <div className="space-y-6">
+              {/* AI Prediction Stats */}
+              <AIPredictionStats pouleId={id} />
+              
+              <div className="glass-card rounded-2xl p-6">
+                <h2 className="font-display font-bold text-lg mb-4">Jouw Voorspellingen</h2>
+                {predictions && predictions.length > 0 ? (
+                  <div className="space-y-3">
+                    {predictions.map(pred => (
+                      <div key={pred.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm">Match ID: {pred.match_id.slice(0, 8)}...</span>
+                          {pred.is_ai_generated && (
+                            <span className="px-1.5 py-0.5 rounded bg-primary/20 text-primary text-xs font-medium flex items-center gap-1">
+                              <Brain className="w-3 h-3" />
+                              AI
+                            </span>
+                          )}
+                        </div>
+                        <span className="font-semibold">
+                          {pred.predicted_home_score} - {pred.predicted_away_score}
                         </span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-muted-foreground">
-                  Je hebt nog geen voorspellingen gedaan voor deze poule.
-                </p>
-              )}
+                        {pred.points_earned !== null && (
+                          <span className={`font-bold ${pred.points_earned > 0 ? "text-primary" : "text-muted-foreground"}`}>
+                            +{pred.points_earned} pts
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground">
+                    Je hebt nog geen voorspellingen gedaan voor deze poule.
+                  </p>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -942,7 +972,7 @@ interface MatchPredictionCardProps {
   prediction?: Prediction;
   pouleId: string;
   userId?: string;
-  onSave: () => void;
+  onSave: (isAiGenerated: boolean) => void;
   bulkPrediction?: { homeScore: number; awayScore: number };
   onScoreChange?: (homeScore: string, awayScore: string) => void;
 }
@@ -964,6 +994,7 @@ const MatchPredictionCard = ({ match, prediction, pouleId, userId, onSave, bulkP
   );
   const [isSaving, setIsSaving] = useState(false);
   const [showAIPrediction, setShowAIPrediction] = useState(false);
+  const [isAiGenerated, setIsAiGenerated] = useState(false);
   
   const { toast } = useToast();
 
@@ -972,6 +1003,7 @@ const MatchPredictionCard = ({ match, prediction, pouleId, userId, onSave, bulkP
     if (bulkPrediction) {
       setHomeScore(bulkPrediction.homeScore.toString());
       setAwayScore(bulkPrediction.awayScore.toString());
+      setIsAiGenerated(true);
     }
   }, [bulkPrediction]);
 
@@ -1011,6 +1043,7 @@ const MatchPredictionCard = ({ match, prediction, pouleId, userId, onSave, bulkP
           .update({
             predicted_home_score: parseInt(homeScore),
             predicted_away_score: parseInt(awayScore),
+            is_ai_generated: isAiGenerated,
           })
           .eq("id", prediction.id);
         
@@ -1024,6 +1057,7 @@ const MatchPredictionCard = ({ match, prediction, pouleId, userId, onSave, bulkP
             poule_id: pouleId,
             predicted_home_score: parseInt(homeScore),
             predicted_away_score: parseInt(awayScore),
+            is_ai_generated: isAiGenerated,
           });
         
         if (error) throw error;
@@ -1034,7 +1068,8 @@ const MatchPredictionCard = ({ match, prediction, pouleId, userId, onSave, bulkP
         description: `${match.home_team} ${homeScore} - ${awayScore} ${match.away_team}`,
       });
       
-      onSave();
+      onSave(isAiGenerated);
+      setIsAiGenerated(false);
     } catch (error: any) {
       toast({
         title: "Fout bij opslaan",
@@ -1184,6 +1219,7 @@ const MatchPredictionCard = ({ match, prediction, pouleId, userId, onSave, bulkP
           onApplyPrediction={(h, a) => {
             setHomeScore(h.toString());
             setAwayScore(a.toString());
+            setIsAiGenerated(true);
           }}
         />
 
