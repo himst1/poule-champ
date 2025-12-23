@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, Users, Goal, Shield, Shirt, User, Plus, Trash2, FileJson, LayoutGrid, List, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Search, Users, Goal, Shield, Shirt, User, Plus, Trash2, FileJson, LayoutGrid, List, ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -222,6 +222,8 @@ const Players = () => {
   const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
   const [sortBy, setSortBy] = useState<"name" | "age" | "goals" | "international_caps">("name");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  const [currentPage, setCurrentPage] = useState(1);
+  const playersPerPage = 20;
   
   const [bulkJsonInput, setBulkJsonInput] = useState("");
   const [bulkImportError, setBulkImportError] = useState("");
@@ -443,8 +445,20 @@ const Players = () => {
     return multiplier * (a[sortBy] - b[sortBy]);
   });
 
-  // Group players by country
-  const playersByCountry = filteredPlayers?.reduce((acc, player) => {
+  // Pagination
+  const totalPages = Math.ceil((filteredPlayers?.length || 0) / playersPerPage);
+  const paginatedPlayers = filteredPlayers?.slice(
+    (currentPage - 1) * playersPerPage,
+    currentPage * playersPerPage
+  );
+
+  // Reset page when filters change
+  const handleFilterChange = () => {
+    setCurrentPage(1);
+  };
+
+  // Group players by country (for "all" view, use paginated players)
+  const playersByCountry = paginatedPlayers?.reduce((acc, player) => {
     if (!acc[player.country]) {
       acc[player.country] = [];
     }
@@ -459,11 +473,66 @@ const Players = () => {
       setSortBy(field);
       setSortOrder(field === "name" ? "asc" : "desc");
     }
+    setCurrentPage(1);
   };
 
   const SortIcon = ({ field }: { field: string }) => {
     if (sortBy !== field) return <ArrowUpDown className="w-3 h-3 opacity-50" />;
     return sortOrder === "asc" ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />;
+  };
+
+  // Pagination component
+  const PaginationControls = () => {
+    if (totalPages <= 1) return null;
+    
+    return (
+      <div className="flex items-center justify-center gap-2 mt-6">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+          disabled={currentPage === 1}
+        >
+          <ChevronLeft className="w-4 h-4" />
+        </Button>
+        <div className="flex items-center gap-1">
+          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+            let pageNum: number;
+            if (totalPages <= 5) {
+              pageNum = i + 1;
+            } else if (currentPage <= 3) {
+              pageNum = i + 1;
+            } else if (currentPage >= totalPages - 2) {
+              pageNum = totalPages - 4 + i;
+            } else {
+              pageNum = currentPage - 2 + i;
+            }
+            return (
+              <Button
+                key={pageNum}
+                variant={currentPage === pageNum ? "default" : "outline"}
+                size="sm"
+                onClick={() => setCurrentPage(pageNum)}
+                className="w-8 h-8 p-0"
+              >
+                {pageNum}
+              </Button>
+            );
+          })}
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+          disabled={currentPage === totalPages}
+        >
+          <ChevronRight className="w-4 h-4" />
+        </Button>
+        <span className="text-sm text-muted-foreground ml-2">
+          {(currentPage - 1) * playersPerPage + 1}-{Math.min(currentPage * playersPerPage, filteredPlayers?.length || 0)} van {filteredPlayers?.length || 0}
+        </span>
+      </div>
+    );
   };
 
   return (
@@ -814,27 +883,33 @@ const Players = () => {
                       ))}
                     </div>
                   ) : viewMode === "cards" ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {filteredPlayers?.map((player) => (
-                        <PlayerCard 
-                          key={player.id} 
-                          player={player}
-                          onDelete={user ? () => deletePlayerMutation.mutate(player.id) : undefined}
-                        />
-                      ))}
-                    </div>
-                  ) : (
-                    <Card>
-                      <CardContent className="p-0">
-                        {filteredPlayers?.map((player) => (
-                          <PlayerRow 
+                    <>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {paginatedPlayers?.map((player) => (
+                          <PlayerCard 
                             key={player.id} 
                             player={player}
                             onDelete={user ? () => deletePlayerMutation.mutate(player.id) : undefined}
                           />
                         ))}
-                      </CardContent>
-                    </Card>
+                      </div>
+                      <PaginationControls />
+                    </>
+                  ) : (
+                    <>
+                      <Card>
+                        <CardContent className="p-0">
+                          {paginatedPlayers?.map((player) => (
+                            <PlayerRow 
+                              key={player.id} 
+                              player={player}
+                              onDelete={user ? () => deletePlayerMutation.mutate(player.id) : undefined}
+                            />
+                          ))}
+                        </CardContent>
+                      </Card>
+                      <PaginationControls />
+                    </>
                   )}
 
                   {!isLoading && (!filteredPlayers || filteredPlayers.length === 0) && (
