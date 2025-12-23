@@ -41,6 +41,26 @@ const PHASES = [
   "Achtste finale", "Kwartfinale", "Halve finale", "Troostfinale", "Finale"
 ];
 
+// Country code to flag emoji conversion
+const getCountryFlag = (countryCode: string | null): string => {
+  if (!countryCode) return "🏳️";
+  
+  // If it's already an emoji, return it
+  if (countryCode.length > 2 && /\p{Emoji}/u.test(countryCode)) {
+    return countryCode;
+  }
+  
+  // Convert ISO 3166-1 alpha-2 to flag emoji
+  const code = countryCode.toUpperCase().trim();
+  if (code.length !== 2) return countryCode;
+  
+  const offset = 127397; // Regional indicator symbol offset
+  const flag = String.fromCodePoint(
+    ...code.split("").map(char => char.charCodeAt(0) + offset)
+  );
+  return flag;
+};
+
 const Matches = () => {
   const [selectedPhase, setSelectedPhase] = useState("Alle fases");
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -385,16 +405,17 @@ const MatchRow = ({ match, prediction, isLoggedIn, userId }: MatchRowProps) => {
       {/* Home Team */}
       <div className="flex-1 flex items-center justify-end gap-2 min-w-0">
         <span className="text-sm font-medium truncate text-right">{match.home_team}</span>
-        <span className="text-base shrink-0">{match.home_flag}</span>
+        <span className="text-xs text-muted-foreground uppercase">{match.home_flag?.slice(0, 2) || ""}</span>
+        <span className="text-xl shrink-0">{getCountryFlag(match.home_flag)}</span>
       </div>
 
       {/* Score / Prediction Input */}
       <div className="shrink-0 flex items-center gap-1">
         {isFinished || isLive ? (
-          <div className={`flex items-center gap-1 px-2 py-1 rounded ${isLive ? "bg-destructive/20" : "bg-secondary"}`}>
-            <span className="w-6 text-center font-bold text-sm">{match.home_score}</span>
-            <span className="text-muted-foreground text-xs">-</span>
-            <span className="w-6 text-center font-bold text-sm">{match.away_score}</span>
+          <div className={`flex items-center gap-1 px-3 py-1.5 rounded ${isLive ? "bg-destructive/20" : "bg-secondary"}`}>
+            <span className="w-8 text-center font-bold text-base">{match.home_score}</span>
+            <span className="text-muted-foreground text-sm">-</span>
+            <span className="w-8 text-center font-bold text-base">{match.away_score}</span>
             {isLive && <span className="text-[10px] text-destructive font-bold ml-1">LIVE</span>}
           </div>
         ) : isLoggedIn && canPredict ? (
@@ -420,17 +441,18 @@ const MatchRow = ({ match, prediction, isLoggedIn, userId }: MatchRowProps) => {
             />
           </div>
         ) : (
-          <div className="flex items-center gap-1 px-2 py-1 rounded bg-secondary">
-            <span className="w-6 text-center text-muted-foreground text-sm">-</span>
-            <span className="text-muted-foreground text-xs">-</span>
-            <span className="w-6 text-center text-muted-foreground text-sm">-</span>
+          <div className="flex items-center gap-1 px-3 py-1.5 rounded bg-secondary">
+            <span className="w-8 text-center text-muted-foreground text-base">-</span>
+            <span className="text-muted-foreground text-sm">-</span>
+            <span className="w-8 text-center text-muted-foreground text-base">-</span>
           </div>
         )}
       </div>
 
       {/* Away Team */}
       <div className="flex-1 flex items-center gap-2 min-w-0">
-        <span className="text-base shrink-0">{match.away_flag}</span>
+        <span className="text-xl shrink-0">{getCountryFlag(match.away_flag)}</span>
+        <span className="text-xs text-muted-foreground uppercase">{match.away_flag?.slice(0, 2) || ""}</span>
         <span className="text-sm font-medium truncate">{match.away_team}</span>
       </div>
 
