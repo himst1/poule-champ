@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Trophy, Users, ArrowLeft, Share2, Copy, Check, Target, Loader2, Lock, Clock, Brain, Star, StarOff, Calendar, X } from "lucide-react";
+import { Trophy, Users, ArrowLeft, Share2, Copy, Check, Target, Loader2, Lock, Clock, Brain, Star, StarOff, Calendar, X, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -233,6 +233,8 @@ const PouleDetail = () => {
   const [copied, setCopied] = useState(false);
   const [showBulkAIPrediction, setShowBulkAIPrediction] = useState(false);
   const [bulkPredictions, setBulkPredictions] = useState<Record<string, { homeScore: number; awayScore: number }>>({});
+  const [localScores, setLocalScores] = useState<Record<string, { homeScore: string; awayScore: string }>>({});
+  const [isSavingAll, setIsSavingAll] = useState(false);
   
   // Filter states
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -266,11 +268,23 @@ const PouleDetail = () => {
   // Handle bulk predictions applied
   const handleBulkPredictionsApplied = (predictions: { matchId: string; homeScore: number; awayScore: number }[]) => {
     const newBulkPredictions: Record<string, { homeScore: number; awayScore: number }> = {};
+    const newLocalScores: Record<string, { homeScore: string; awayScore: string }> = { ...localScores };
     predictions.forEach(p => {
       newBulkPredictions[p.matchId] = { homeScore: p.homeScore, awayScore: p.awayScore };
+      newLocalScores[p.matchId] = { homeScore: p.homeScore.toString(), awayScore: p.awayScore.toString() };
     });
     setBulkPredictions(newBulkPredictions);
+    setLocalScores(newLocalScores);
   };
+
+  // Update local scores from child component
+  const handleLocalScoreChange = useCallback((matchId: string, homeScore: string, awayScore: string) => {
+    setLocalScores(prev => ({
+      ...prev,
+      [matchId]: { homeScore, awayScore }
+    }));
+  }, []);
+
 
   // Fetch poule details
   const { data: poule, isLoading: pouleLoading } = useQuery({
@@ -387,6 +401,100 @@ const PouleDetail = () => {
   predictions?.forEach(p => {
     predictionMap[p.match_id] = p;
   });
+
+  // Get all unsaved predictions (local scores that differ from saved predictions)
+  const unsavedPredictions = useMemo(() => {
+    const unsaved: { matchId: string; homeScore: number; awayScore: number; isNew: boolean }[] = [];
+    
+    Object.entries(localScores).forEach(([matchId, scores]) => {
+      if (scores.homeScore === "" || scores.awayScore === "") return;
+      
+      const match = displayMatches.find(m => m.id === matchId);
+      if (!match) return;
+      
+      // Check if match is still open for predictions
+      const kickoffDate = parseISO(match.kickoff_time);
+      const lockTime = addMinutes(kickoffDate, -5);
+      if (!isBefore(new Date(), lockTime)) return;
+      
+      const existingPrediction = predictionMap[matchId];
+      const homeScore = parseInt(scores.homeScore);
+      const awayScore = parseInt(scores.awayScore);
+      
+      // Only add if it's new or different from existing
+      if (!existingPrediction) {
+        unsaved.push({ matchId, homeScore, awayScore, isNew: true });
+      } else if (
+        existingPrediction.predicted_home_score !== homeScore ||
+        existingPrediction.predicted_away_score !== awayScore
+      ) {
+        unsaved.push({ matchId, homeScore, awayScore, isNew: false });
+      }
+    });
+    
+    return unsaved;
+  }, [localScores, displayMatches, predictionMap]);
+
+  // Save all unsaved predictions
+  const saveAllPredictions = async () => {
+    if (!user || unsavedPredictions.length === 0) return;
+    
+    setIsSavingAll(true);
+    try {
+      const newPredictions = unsavedPredictions.filter(p => p.isNew);
+      const updates = unsavedPredictions.filter(p => !p.isNew);
+      
+      // Insert new predictions
+      if (newPredictions.length > 0) {
+        const { error: insertError } = await supabase
+          .from("predictions")
+          .insert(
+            newPredictions.map(p => ({
+              user_id: user.id,
+              match_id: p.matchId,
+              poule_id: id!,
+              predicted_home_score: p.homeScore,
+              predicted_away_score: p.awayScore,
+            }))
+          );
+        
+        if (insertError) throw insertError;
+      }
+      
+      // Update existing predictions one by one (Supabase doesn't support batch updates easily)
+      for (const update of updates) {
+        const existingPrediction = predictionMap[update.matchId];
+        if (existingPrediction) {
+          const { error: updateError } = await supabase
+            .from("predictions")
+            .update({
+              predicted_home_score: update.homeScore,
+              predicted_away_score: update.awayScore,
+            })
+            .eq("id", existingPrediction.id);
+          
+          if (updateError) throw updateError;
+        }
+      }
+      
+      toast({
+        title: "Alle voorspellingen opgeslagen!",
+        description: `${unsavedPredictions.length} voorspelling${unsavedPredictions.length > 1 ? 'en' : ''} opgeslagen`,
+      });
+      
+      queryClient.invalidateQueries({ queryKey: ["poule-predictions"] });
+      setLocalScores({});
+      setBulkPredictions({});
+    } catch (error: any) {
+      toast({
+        title: "Fout bij opslaan",
+        description: error.message || "Probeer het opnieuw",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSavingAll(false);
+    }
+  };
 
   const currentMember = members?.find(m => m.user_id === user?.id);
   const memberCount = members?.length || 0;
@@ -575,23 +683,44 @@ const PouleDetail = () => {
 
           {activeTab === "matches" && (
             <div className="space-y-4">
-              {/* Header with Bulk AI button */}
-              <div className="flex items-center justify-between mb-2">
+              {/* Header with Bulk AI button and Save All button */}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-2">
                 <h2 className="font-display font-bold text-lg">Komende Wedstrijden</h2>
-                {user && predictableMatches.length > 0 && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowBulkAIPrediction(true)}
-                    className="gap-2"
-                  >
-                    <Brain className="w-4 h-4 text-primary" />
-                    Bulk AI
-                    <span className="bg-primary/10 text-primary text-xs px-1.5 py-0.5 rounded">
-                      {predictableMatches.length}
-                    </span>
-                  </Button>
-                )}
+                <div className="flex gap-2">
+                  {user && unsavedPredictions.length > 0 && (
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={saveAllPredictions}
+                      disabled={isSavingAll}
+                      className="gap-2 glow-primary"
+                    >
+                      {isSavingAll ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Save className="w-4 h-4" />
+                      )}
+                      Sla alles op
+                      <span className="bg-primary-foreground/20 text-primary-foreground text-xs px-1.5 py-0.5 rounded">
+                        {unsavedPredictions.length}
+                      </span>
+                    </Button>
+                  )}
+                  {user && predictableMatches.length > 0 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowBulkAIPrediction(true)}
+                      className="gap-2"
+                    >
+                      <Brain className="w-4 h-4 text-primary" />
+                      Bulk AI
+                      <span className="bg-primary/10 text-primary text-xs px-1.5 py-0.5 rounded">
+                        {predictableMatches.length}
+                      </span>
+                    </Button>
+                  )}
+                </div>
               </div>
 
               {/* Filters */}
@@ -739,8 +868,17 @@ const PouleDetail = () => {
                     prediction={predictionMap[match.id]}
                     pouleId={id!}
                     userId={user?.id}
-                    onSave={() => queryClient.invalidateQueries({ queryKey: ["poule-predictions"] })}
+                    onSave={() => {
+                      queryClient.invalidateQueries({ queryKey: ["poule-predictions"] });
+                      // Clear local score for this match after individual save
+                      setLocalScores(prev => {
+                        const newScores = { ...prev };
+                        delete newScores[match.id];
+                        return newScores;
+                      });
+                    }}
                     bulkPrediction={bulkPredictions[match.id]}
+                    onScoreChange={(home, away) => handleLocalScoreChange(match.id, home, away)}
                   />
                 ))
               ) : (
@@ -806,9 +944,10 @@ interface MatchPredictionCardProps {
   userId?: string;
   onSave: () => void;
   bulkPrediction?: { homeScore: number; awayScore: number };
+  onScoreChange?: (homeScore: string, awayScore: string) => void;
 }
 
-const MatchPredictionCard = ({ match, prediction, pouleId, userId, onSave, bulkPrediction }: MatchPredictionCardProps) => {
+const MatchPredictionCard = ({ match, prediction, pouleId, userId, onSave, bulkPrediction, onScoreChange }: MatchPredictionCardProps) => {
   const kickoffDate = parseISO(match.kickoff_time);
   const lockTime = addMinutes(kickoffDate, -5); // Lock 5 minutes before kickoff
   
@@ -835,6 +974,11 @@ const MatchPredictionCard = ({ match, prediction, pouleId, userId, onSave, bulkP
       setAwayScore(bulkPrediction.awayScore.toString());
     }
   }, [bulkPrediction]);
+
+  // Notify parent of score changes
+  useEffect(() => {
+    onScoreChange?.(homeScore, awayScore);
+  }, [homeScore, awayScore, onScoreChange]);
 
   // Update time every minute
   useEffect(() => {
