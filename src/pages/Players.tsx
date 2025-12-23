@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, Users, Goal, Shield, Shirt, User, Plus, Trash2, FileJson, LayoutGrid, List } from "lucide-react";
+import { Search, Users, Goal, Shield, Shirt, User, Plus, Trash2, FileJson, LayoutGrid, List, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -220,6 +220,8 @@ const Players = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCountry, setSelectedCountry] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
+  const [sortBy, setSortBy] = useState<"name" | "age" | "goals" | "international_caps">("name");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   
   const [bulkJsonInput, setBulkJsonInput] = useState("");
   const [bulkImportError, setBulkImportError] = useState("");
@@ -427,12 +429,18 @@ const Players = () => {
     ? [...new Set(players.map(p => p.country))].sort()
     : [];
 
-  // Filter players
+  // Filter and sort players
   const filteredPlayers = players?.filter(player => {
     const matchesSearch = player.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       player.country.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCountry = selectedCountry === "all" || player.country === selectedCountry;
     return matchesSearch && matchesCountry;
+  }).sort((a, b) => {
+    const multiplier = sortOrder === "asc" ? 1 : -1;
+    if (sortBy === "name") {
+      return multiplier * a.name.localeCompare(b.name);
+    }
+    return multiplier * (a[sortBy] - b[sortBy]);
   });
 
   // Group players by country
@@ -443,6 +451,20 @@ const Players = () => {
     acc[player.country].push(player);
     return acc;
   }, {} as Record<string, WKPlayer[]>) || {};
+
+  const handleSort = (field: "name" | "age" | "goals" | "international_caps") => {
+    if (sortBy === field) {
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    } else {
+      setSortBy(field);
+      setSortOrder(field === "name" ? "asc" : "desc");
+    }
+  };
+
+  const SortIcon = ({ field }: { field: string }) => {
+    if (sortBy !== field) return <ArrowUpDown className="w-3 h-3 opacity-50" />;
+    return sortOrder === "asc" ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />;
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -676,6 +698,43 @@ const Players = () => {
                     <span>{players?.reduce((sum, p) => sum + p.goals, 0) || 0} goals</span>
                   </div>
                 </div>
+              </div>
+
+              {/* Sort Options */}
+              <div className="flex flex-wrap gap-2 mb-4">
+                <span className="text-sm text-muted-foreground self-center mr-1">Sorteer op:</span>
+                <Button
+                  variant={sortBy === "name" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => handleSort("name")}
+                  className="h-8 gap-1"
+                >
+                  Naam <SortIcon field="name" />
+                </Button>
+                <Button
+                  variant={sortBy === "age" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => handleSort("age")}
+                  className="h-8 gap-1"
+                >
+                  Leeftijd <SortIcon field="age" />
+                </Button>
+                <Button
+                  variant={sortBy === "goals" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => handleSort("goals")}
+                  className="h-8 gap-1"
+                >
+                  Goals <SortIcon field="goals" />
+                </Button>
+                <Button
+                  variant={sortBy === "international_caps" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => handleSort("international_caps")}
+                  className="h-8 gap-1"
+                >
+                  Interlands <SortIcon field="international_caps" />
+                </Button>
               </div>
 
               {/* Country Tabs */}
