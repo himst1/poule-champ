@@ -7,6 +7,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import PouleDetail from "./pages/PouleDetail";
+import PredictionsOverview from "./pages/PredictionsOverview";
 import CreatePoule from "./pages/CreatePoule";
 import PouleManagement from "./pages/PouleManagement";
 import Matches from "./pages/Matches";
@@ -32,6 +33,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/poule/:id" element={<PouleDetail />} />
+            <Route path="/poule/:id/overzicht" element={<PredictionsOverview />} />
             <Route path="/create-poule" element={<CreatePoule />} />
             <Route path="/poule-management" element={<PouleManagement />} />
             <Route path="/matches" element={<Matches />} />
