@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, Users, Goal, Shield, Shirt, User, Plus, Trash2, FileJson } from "lucide-react";
+import { Search, Users, Goal, Shield, Shirt, User, Plus, Trash2, FileJson, LayoutGrid, List } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -185,11 +185,41 @@ const PlayerCard = ({ player, onDelete }: { player: WKPlayer; onDelete?: () => v
   );
 };
 
+const PlayerRow = ({ player, onDelete }: { player: WKPlayer; onDelete?: () => void }) => {
+  return (
+    <div className="flex items-center gap-3 p-3 border-b border-border last:border-b-0 hover:bg-secondary/30 transition-colors">
+      <span className="text-xl w-8 text-center shrink-0">{player.country_flag || "⚽"}</span>
+      <span className="font-medium flex-1 min-w-0 truncate">{player.name}</span>
+      <Badge variant="outline" className={`${positionColor(player.position)} shrink-0`}>
+        {positionIcon(player.position)}
+        <span className="ml-1 hidden sm:inline">{player.position}</span>
+      </Badge>
+      <span className="text-sm text-muted-foreground w-16 text-center shrink-0 hidden md:block">{player.age} jr</span>
+      <span className="text-sm text-muted-foreground w-16 text-center shrink-0 hidden lg:block">{player.international_caps} caps</span>
+      <div className="flex items-center gap-1 text-primary font-bold w-12 shrink-0 justify-end">
+        <Goal className="w-4 h-4" />
+        {player.goals}
+      </div>
+      {onDelete && (
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          onClick={onDelete} 
+          className="text-destructive hover:text-destructive shrink-0 h-8 w-8"
+        >
+          <Trash2 className="w-4 h-4" />
+        </Button>
+      )}
+    </div>
+  );
+};
+
 const Players = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCountry, setSelectedCountry] = useState<string>("all");
+  const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
   
   const [bulkJsonInput, setBulkJsonInput] = useState("");
   const [bulkImportError, setBulkImportError] = useState("");
@@ -607,7 +637,7 @@ const Players = () => {
 
             {/* Players List */}
             <div className={user ? "lg:col-span-2" : "lg:col-span-3"}>
-              {/* Search and Stats */}
+              {/* Search, View Toggle and Stats */}
               <div className="flex flex-col md:flex-row gap-4 mb-6">
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -617,6 +647,24 @@ const Players = () => {
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-10"
                   />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant={viewMode === "cards" ? "default" : "outline"}
+                    size="icon"
+                    onClick={() => setViewMode("cards")}
+                    className="h-9 w-9"
+                  >
+                    <LayoutGrid className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant={viewMode === "list" ? "default" : "outline"}
+                    size="icon"
+                    onClick={() => setViewMode("list")}
+                    className="h-9 w-9"
+                  >
+                    <List className="w-4 h-4" />
+                  </Button>
                 </div>
                 <div className="flex items-center gap-4 text-sm text-muted-foreground">
                   <div className="flex items-center gap-2">
@@ -680,19 +728,33 @@ const Players = () => {
                             <h2 className="text-xl font-semibold">{country}</h2>
                             <Badge variant="secondary">{countryPlayers.length} spelers</Badge>
                           </div>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {countryPlayers.map((player) => (
-                              <PlayerCard 
-                                key={player.id} 
-                                player={player}
-                                onDelete={user ? () => deletePlayerMutation.mutate(player.id) : undefined}
-                              />
-                            ))}
-                          </div>
+                          {viewMode === "cards" ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              {countryPlayers.map((player) => (
+                                <PlayerCard 
+                                  key={player.id} 
+                                  player={player}
+                                  onDelete={user ? () => deletePlayerMutation.mutate(player.id) : undefined}
+                                />
+                              ))}
+                            </div>
+                          ) : (
+                            <Card>
+                              <CardContent className="p-0">
+                                {countryPlayers.map((player) => (
+                                  <PlayerRow 
+                                    key={player.id} 
+                                    player={player}
+                                    onDelete={user ? () => deletePlayerMutation.mutate(player.id) : undefined}
+                                  />
+                                ))}
+                              </CardContent>
+                            </Card>
+                          )}
                         </div>
                       ))}
                     </div>
-                  ) : (
+                  ) : viewMode === "cards" ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {filteredPlayers?.map((player) => (
                         <PlayerCard 
@@ -702,6 +764,18 @@ const Players = () => {
                         />
                       ))}
                     </div>
+                  ) : (
+                    <Card>
+                      <CardContent className="p-0">
+                        {filteredPlayers?.map((player) => (
+                          <PlayerRow 
+                            key={player.id} 
+                            player={player}
+                            onDelete={user ? () => deletePlayerMutation.mutate(player.id) : undefined}
+                          />
+                        ))}
+                      </CardContent>
+                    </Card>
                   )}
 
                   {!isLoading && (!filteredPlayers || filteredPlayers.length === 0) && (
