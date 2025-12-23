@@ -18,6 +18,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { AIPredictionModal } from "@/components/AIPredictionModal";
 import { BulkAIPredictionModal } from "@/components/BulkAIPredictionModal";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { AIPredictionStats } from "@/components/AIPredictionStats";
 
 // Countdown hook for upcoming matches
 const useCountdown = (targetDate: Date) => {
@@ -569,66 +570,71 @@ const Matches = () => {
 
           {/* Prediction Stats for logged in users */}
           {user && (
-            <div className="glass-card rounded-2xl p-6 mb-8">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                  <h3 className="font-semibold text-lg mb-1">Jouw voorspellingen</h3>
-                  <p className="text-muted-foreground text-sm">
-                    {predictedCount} van {totalMatches} wedstrijden voorspeld
-                  </p>
-                </div>
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-48 h-2 bg-secondary rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-gradient-to-r from-primary to-accent transition-all"
-                        style={{ width: `${totalMatches > 0 ? (predictedCount / totalMatches) * 100 : 0}%` }}
-                      />
-                    </div>
-                    <span className="text-sm font-medium text-primary">
-                      {totalMatches > 0 ? Math.round((predictedCount / totalMatches) * 100) : 0}%
-                    </span>
+            <>
+              <div className="glass-card rounded-2xl p-6 mb-8">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div>
+                    <h3 className="font-semibold text-lg mb-1">Jouw voorspellingen</h3>
+                    <p className="text-muted-foreground text-sm">
+                      {predictedCount} van {totalMatches} wedstrijden voorspeld
+                    </p>
                   </div>
-                  
-                  {/* Save All Button */}
-                  {unsavedPredictions.length > 0 && (
-                    <Button
-                      variant="default"
-                      size="sm"
-                      onClick={saveAllPredictions}
-                      disabled={isSavingAll}
-                      className="gap-2 glow-primary"
-                    >
-                      {isSavingAll ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Save className="w-4 h-4" />
-                      )}
-                      Sla alles op
-                      <span className="bg-primary-foreground/20 text-primary-foreground text-xs px-1.5 py-0.5 rounded">
-                        {unsavedPredictions.length}
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-48 h-2 bg-secondary rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-gradient-to-r from-primary to-accent transition-all"
+                          style={{ width: `${totalMatches > 0 ? (predictedCount / totalMatches) * 100 : 0}%` }}
+                        />
+                      </div>
+                      <span className="text-sm font-medium text-primary">
+                        {totalMatches > 0 ? Math.round((predictedCount / totalMatches) * 100) : 0}%
                       </span>
-                    </Button>
-                  )}
-                  
-                  {/* Bulk AI Prediction Button */}
-                  {predictableMatches.length > 0 && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowBulkAIPrediction(true)}
-                      className="gap-2"
-                    >
-                      <Brain className="w-4 h-4 text-primary" />
-                      Bulk AI
-                      <span className="bg-primary/10 text-primary text-xs px-1.5 py-0.5 rounded">
-                        {predictableMatches.length}
-                      </span>
-                    </Button>
-                  )}
+                    </div>
+                    
+                    {/* Save All Button */}
+                    {unsavedPredictions.length > 0 && (
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={saveAllPredictions}
+                        disabled={isSavingAll}
+                        className="gap-2 glow-primary"
+                      >
+                        {isSavingAll ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Save className="w-4 h-4" />
+                        )}
+                        Sla alles op
+                        <span className="bg-primary-foreground/20 text-primary-foreground text-xs px-1.5 py-0.5 rounded">
+                          {unsavedPredictions.length}
+                        </span>
+                      </Button>
+                    )}
+                    
+                    {/* Bulk AI Prediction Button */}
+                    {predictableMatches.length > 0 && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowBulkAIPrediction(true)}
+                        className="gap-2"
+                      >
+                        <Brain className="w-4 h-4 text-primary" />
+                        Bulk AI
+                        <span className="bg-primary/10 text-primary text-xs px-1.5 py-0.5 rounded">
+                          {predictableMatches.length}
+                        </span>
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
+              
+              {/* AI Prediction Stats */}
+              <AIPredictionStats />
+            </>
           )}
 
           {/* Login CTA for non-logged in users */}
