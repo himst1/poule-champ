@@ -21,6 +21,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { PouleManagement } from "@/components/PouleManagement";
 import { MatchDeadlineBadge } from "@/components/DeadlineWarning";
+import { MatchdayOverview } from "@/components/MatchdayOverview";
 // Get all unique country names from COUNTRY_CODES (defined below)
 const ALL_COUNTRIES = [
   "Argentinië", "Australië", "Bahrein", "België", "Bolivia", "Brazilië",
@@ -358,6 +359,35 @@ const PouleDetail = () => {
     },
   });
 
+  // Fetch all matches (for matchday overview including finished)
+  const { data: allMatches } = useQuery({
+    queryKey: ["all-matches"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("matches")
+        .select("*")
+        .order("kickoff_time", { ascending: true });
+      
+      if (error) throw error;
+      return data as Match[];
+    },
+  });
+
+  // Fetch all predictions in this poule (for matchday overview)
+  const { data: allPoulePredictions } = useQuery({
+    queryKey: ["all-poule-predictions", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("predictions")
+        .select("*")
+        .eq("poule_id", id);
+      
+      if (error) throw error;
+      return data as (Prediction & { user_id: string })[];
+    },
+    enabled: !!id,
+  });
+
   // Available dates for filter
   const availableDates = useMemo(() => {
     if (!matches) return [];
@@ -668,47 +698,59 @@ const PouleDetail = () => {
 
           {/* Tab Content */}
           {activeTab === "ranking" && (
-            <div className="glass-card rounded-2xl overflow-hidden">
-              <div className="p-4 border-b border-border">
-                <h2 className="font-display font-bold text-lg">Live Ranglijst</h2>
+            <div className="space-y-6">
+              <div className="glass-card rounded-2xl overflow-hidden">
+                <div className="p-4 border-b border-border">
+                  <h2 className="font-display font-bold text-lg">Live Ranglijst</h2>
+                </div>
+                {members && members.length > 0 ? (
+                  <div className="divide-y divide-border">
+                    {members.map((member, index) => {
+                      const isCurrentUser = member.user_id === user?.id;
+                      const rank = index + 1;
+                      return (
+                        <div
+                          key={member.id}
+                          className={`flex items-center gap-4 p-4 transition-colors ${
+                            isCurrentUser ? "bg-primary/10" : "hover:bg-secondary/50"
+                          }`}
+                        >
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${
+                            rank === 1 ? "bg-accent text-accent-foreground" :
+                            rank === 2 ? "bg-muted-foreground/30 text-foreground" :
+                            rank === 3 ? "bg-orange-600/30 text-orange-400" :
+                            "bg-secondary text-muted-foreground"
+                          }`}>
+                            {rank}
+                          </div>
+                          <div className="flex-1">
+                            <p className={`font-medium ${isCurrentUser ? "text-primary" : ""}`}>
+                              {member.profiles?.display_name || member.profiles?.email?.split("@")[0] || "Onbekend"}
+                              {isCurrentUser && <span className="ml-2 text-xs text-primary">(jij)</span>}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-display font-bold">{member.points} pts</p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="p-8 text-center text-muted-foreground">
+                    Nog geen deelnemers
+                  </div>
+                )}
               </div>
-              {members && members.length > 0 ? (
-                <div className="divide-y divide-border">
-                  {members.map((member, index) => {
-                    const isCurrentUser = member.user_id === user?.id;
-                    const rank = index + 1;
-                    return (
-                      <div
-                        key={member.id}
-                        className={`flex items-center gap-4 p-4 transition-colors ${
-                          isCurrentUser ? "bg-primary/10" : "hover:bg-secondary/50"
-                        }`}
-                      >
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${
-                          rank === 1 ? "bg-accent text-accent-foreground" :
-                          rank === 2 ? "bg-muted-foreground/30 text-foreground" :
-                          rank === 3 ? "bg-orange-600/30 text-orange-400" :
-                          "bg-secondary text-muted-foreground"
-                        }`}>
-                          {rank}
-                        </div>
-                        <div className="flex-1">
-                          <p className={`font-medium ${isCurrentUser ? "text-primary" : ""}`}>
-                            {member.profiles?.display_name || member.profiles?.email?.split("@")[0] || "Onbekend"}
-                            {isCurrentUser && <span className="ml-2 text-xs text-primary">(jij)</span>}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-display font-bold">{member.points} pts</p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="p-8 text-center text-muted-foreground">
-                  Nog geen deelnemers
-                </div>
+
+              {/* Matchday Overview */}
+              {allMatches && allPoulePredictions && members && poule && (
+                <MatchdayOverview
+                  matches={allMatches}
+                  predictions={allPoulePredictions}
+                  members={members}
+                  scoringRules={poule.scoring_rules || { correct_score: 5, correct_result: 2 }}
+                />
               )}
             </div>
           )}
