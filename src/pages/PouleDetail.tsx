@@ -23,6 +23,7 @@ import { PouleManagement } from "@/components/PouleManagement";
 import { MatchDeadlineBadge } from "@/components/DeadlineWarning";
 import { MatchdayOverview } from "@/components/MatchdayOverview";
 import TopscorerVoting from "@/components/TopscorerVoting";
+import WinnerVoting from "@/components/WinnerVoting";
 // Get all unique country names from COUNTRY_CODES (defined below)
 const ALL_COUNTRIES = [
   "Argentinië", "Australië", "Bahrein", "België", "Bolivia", "Brazilië",
@@ -236,7 +237,7 @@ const PouleDetail = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<"ranking" | "matches" | "predictions" | "topscorer">("ranking");
+  const [activeTab, setActiveTab] = useState<"ranking" | "matches" | "predictions" | "topscorer" | "winner">("ranking");
   const [copied, setCopied] = useState(false);
   const [showBulkAIPrediction, setShowBulkAIPrediction] = useState(false);
   const [bulkPredictions, setBulkPredictions] = useState<Record<string, { homeScore: number; awayScore: number }>>({});
@@ -683,6 +684,7 @@ const PouleDetail = () => {
               { id: "matches", label: "Wedstrijden", icon: Target },
               { id: "predictions", label: "Mijn Voorspellingen", icon: Users },
               { id: "topscorer", label: "Topscorer", icon: Goal },
+              { id: "winner", label: "WK Winnaar", icon: Trophy },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -1020,6 +1022,10 @@ const PouleDetail = () => {
 
           {activeTab === "topscorer" && (
             <TopscorerVoting pouleId={id!} deadline={poule?.deadline} />
+          )}
+
+          {activeTab === "winner" && (
+            <WinnerVoting pouleId={id!} deadline={poule?.deadline} />
           )}
         </div>
       </main>
