@@ -10,8 +10,79 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { format, parseISO, isBefore, addMinutes, differenceInMinutes } from "date-fns";
+import { format, parseISO, isBefore, addMinutes, differenceInMinutes, differenceInSeconds } from "date-fns";
 import { nl } from "date-fns/locale";
+
+// Countdown hook for upcoming matches
+const useCountdown = (targetDate: Date) => {
+  const [timeLeft, setTimeLeft] = useState(() => {
+    const diff = differenceInSeconds(targetDate, new Date());
+    return diff > 0 ? diff : 0;
+  });
+
+  useEffect(() => {
+    if (timeLeft <= 0) return;
+
+    const interval = setInterval(() => {
+      const diff = differenceInSeconds(targetDate, new Date());
+      setTimeLeft(diff > 0 ? diff : 0);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [targetDate, timeLeft]);
+
+  const days = Math.floor(timeLeft / 86400);
+  const hours = Math.floor((timeLeft % 86400) / 3600);
+  const minutes = Math.floor((timeLeft % 3600) / 60);
+  const seconds = timeLeft % 60;
+
+  return { days, hours, minutes, seconds, totalSeconds: timeLeft };
+};
+
+// Countdown display component
+const CountdownTimer = ({ kickoffDate }: { kickoffDate: Date }) => {
+  const { days, hours, minutes, seconds, totalSeconds } = useCountdown(kickoffDate);
+
+  if (totalSeconds <= 0) return null;
+
+  // More than 7 days
+  if (days > 7) {
+    return (
+      <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-secondary/80 text-muted-foreground text-xs">
+        <Clock className="w-3.5 h-3.5" />
+        <span>{days} dagen</span>
+      </div>
+    );
+  }
+
+  // More than 24 hours
+  if (days > 0) {
+    return (
+      <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-secondary/80 text-muted-foreground text-xs">
+        <Clock className="w-3.5 h-3.5" />
+        <span>{days}d {hours}u {minutes}m</span>
+      </div>
+    );
+  }
+
+  // Less than 24 hours but more than 1 hour
+  if (hours > 0) {
+    return (
+      <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-accent/20 text-accent text-xs font-medium">
+        <Clock className="w-3.5 h-3.5" />
+        <span>{hours}u {minutes}m {seconds.toString().padStart(2, '0')}s</span>
+      </div>
+    );
+  }
+
+  // Less than 1 hour - urgent countdown
+  return (
+    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-destructive/20 text-destructive text-sm font-bold animate-pulse">
+      <Clock className="w-4 h-4" />
+      <span>{minutes.toString().padStart(2, '0')}:{seconds.toString().padStart(2, '0')}</span>
+    </div>
+  );
+};
 
 // Team name to ISO country code mapping for WK 2026
 const COUNTRY_CODES: Record<string, string> = {
@@ -558,23 +629,22 @@ const MatchPredictionCard = ({ match, prediction, pouleId, userId, onSave }: Mat
   return (
     <Card className="glass-card rounded-2xl overflow-hidden">
       {/* Header with phase and time */}
-      <div className="flex items-center justify-between px-5 py-3 bg-secondary/50 border-b border-border/50">
-        <span className="text-sm text-muted-foreground font-medium">{match.phase || "Groepsfase"}</span>
-        <div className="flex items-center gap-2">
-          {isLocked ? (
-            <div className="flex items-center gap-1.5 text-destructive">
-              <Lock className="w-3.5 h-3.5" />
-              <span className="text-xs font-medium">Vergrendeld</span>
-            </div>
-          ) : minutesUntilLock <= 60 ? (
-            <div className="flex items-center gap-1.5 text-accent">
-              <Clock className="w-3.5 h-3.5" />
-              <span className="text-xs font-medium">Nog {minutesUntilLock} min</span>
-            </div>
-          ) : null}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-5 py-3 bg-secondary/50 border-b border-border/50">
+        <div className="flex items-center justify-between sm:justify-start gap-3">
+          <span className="text-sm text-muted-foreground font-medium">{match.phase || "Groepsfase"}</span>
           <span className="text-sm text-muted-foreground">
             {format(kickoffDate, "d MMM HH:mm", { locale: nl })}
           </span>
+        </div>
+        <div className="flex items-center justify-center gap-2">
+          {isLocked ? (
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-destructive/20 text-destructive text-xs font-medium">
+              <Lock className="w-3.5 h-3.5" />
+              <span>Vergrendeld</span>
+            </div>
+          ) : (
+            <CountdownTimer kickoffDate={lockTime} />
+          )}
         </div>
       </div>
       
