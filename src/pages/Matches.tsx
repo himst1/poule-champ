@@ -45,31 +45,36 @@ const CountdownTimer = ({ kickoffDate }: { kickoffDate: Date }) => {
 
   if (totalSeconds <= 0) return null;
 
-  // Show countdown only for matches within 24 hours
+  // More than 7 days - don't show
+  if (days > 7) {
+    return null;
+  }
+
+  // More than 24 hours
   if (days > 0) {
     return (
-      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+      <div className="flex items-center gap-1 px-2 py-0.5 rounded bg-secondary/80 text-muted-foreground text-xs">
         <Clock className="w-3 h-3" />
         <span>{days}d {hours}u</span>
       </div>
     );
   }
 
-  // Within 1 hour - show urgent countdown
-  if (hours === 0 && minutes < 60) {
+  // Less than 24 hours but more than 1 hour
+  if (hours > 0) {
     return (
-      <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-destructive/10 text-destructive text-xs font-medium animate-pulse">
+      <div className="flex items-center gap-1 px-2 py-0.5 rounded bg-accent/20 text-accent text-xs font-medium">
         <Clock className="w-3 h-3" />
-        <span>{minutes}:{seconds.toString().padStart(2, '0')}</span>
+        <span>{hours}u {minutes}m {seconds.toString().padStart(2, '0')}s</span>
       </div>
     );
   }
 
-  // Within 24 hours
+  // Less than 1 hour - urgent countdown with seconds
   return (
-    <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-accent/10 text-accent text-xs font-medium">
+    <div className="flex items-center gap-1 px-2 py-0.5 rounded bg-destructive/20 text-destructive text-xs font-bold animate-pulse">
       <Clock className="w-3 h-3" />
-      <span>{hours}u {minutes}m</span>
+      <span>{minutes.toString().padStart(2, '0')}:{seconds.toString().padStart(2, '0')}</span>
     </div>
   );
 };
@@ -144,21 +149,31 @@ const getFlagUrl = (teamName: string | null): string | null => {
 };
 
 // Flag image component
-const FlagImage = ({ teamName, className = "" }: { teamName: string | null; className?: string }) => {
+const FlagImage = ({ teamName, size = "sm" }: { teamName: string | null; size?: "sm" | "md" | "lg" }) => {
   const flagUrl = getFlagUrl(teamName);
-  const code = teamName ? COUNTRY_CODES[teamName]?.toUpperCase() : null;
+  
+  const sizeClasses = {
+    sm: "w-7 h-5",
+    md: "w-10 h-7",
+    lg: "w-12 h-8",
+  };
   
   if (!flagUrl) {
-    return <span className={`text-muted-foreground text-xs ${className}`}>--</span>;
+    return (
+      <div className={`${sizeClasses[size]} bg-secondary rounded flex items-center justify-center flex-shrink-0`}>
+        <span className="text-muted-foreground text-[10px]">?</span>
+      </div>
+    );
   }
   
   return (
     <img
       src={flagUrl}
       alt={`Vlag van ${teamName}`}
-      className={`w-6 h-4 object-cover rounded-sm shadow-sm ${className}`}
+      className={`${sizeClasses[size]} object-cover rounded shadow-sm flex-shrink-0`}
       onError={(e) => {
-        e.currentTarget.style.display = "none";
+        e.currentTarget.src = "";
+        e.currentTarget.className = `${sizeClasses[size]} bg-secondary rounded flex-shrink-0`;
       }}
     />
   );
@@ -617,7 +632,7 @@ const MatchRow = ({ match, prediction, isLoggedIn, userId }: MatchRowProps) => {
       {/* Home Team */}
       <div className="flex-1 flex items-center justify-end gap-2 min-w-0">
         <span className="text-sm font-medium truncate text-right">{match.home_team}</span>
-        <FlagImage teamName={match.home_team} />
+        <FlagImage teamName={match.home_team} size="md" />
       </div>
 
       {/* Score / Prediction Input */}
@@ -662,7 +677,7 @@ const MatchRow = ({ match, prediction, isLoggedIn, userId }: MatchRowProps) => {
 
       {/* Away Team */}
       <div className="flex-1 flex items-center gap-2 min-w-0">
-        <FlagImage teamName={match.away_team} />
+        <FlagImage teamName={match.away_team} size="md" />
         <span className="text-sm font-medium truncate">{match.away_team}</span>
       </div>
 
