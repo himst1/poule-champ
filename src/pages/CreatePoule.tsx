@@ -7,6 +7,7 @@ import Footer from "@/components/layout/Footer";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import InviteQRCode from "@/components/InviteQRCode";
 
 const CreatePoule = () => {
   const navigate = useNavigate();
@@ -321,23 +322,19 @@ const CreatePoule = () => {
                 </div>
                 <h1 className="font-display text-2xl font-bold">Poule Aangemaakt!</h1>
                 <p className="text-muted-foreground">
-                  Deel de uitnodigingscode met je vrienden zodat ze kunnen deelnemen.
+                  Deel de QR-code of uitnodigingscode met je vrienden zodat ze kunnen deelnemen.
                 </p>
 
-                {/* Invite Code */}
-                <div className="bg-secondary/50 rounded-xl p-6">
-                  <p className="text-sm text-muted-foreground mb-2">Uitnodigingscode</p>
-                  <div className="flex items-center justify-center gap-3">
-                    <code className="text-2xl font-mono font-bold tracking-widest text-primary">
-                      {createdPoule.invite_code}
-                    </code>
-                    <Button variant="outline" size="sm" onClick={copyInviteCode}>
-                      {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                    </Button>
-                  </div>
+                {/* QR Code */}
+                <div className="flex justify-center">
+                  <InviteQRCode 
+                    inviteCode={createdPoule.invite_code} 
+                    pouleName={formData.name}
+                    showButton={false} 
+                  />
                 </div>
 
-                <div className="flex gap-3">
+                <div className="flex gap-3 pt-4">
                   <Button variant="outline" className="flex-1" size="lg" onClick={() => navigate("/dashboard")}>
                     Naar Dashboard
                   </Button>
