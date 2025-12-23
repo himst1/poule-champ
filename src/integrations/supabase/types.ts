@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      global_settings: {
+        Row: {
+          created_at: string
+          id: string
+          setting_key: string
+          setting_value: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          setting_key: string
+          setting_value?: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          setting_key?: string
+          setting_value?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       matches: {
         Row: {
           away_flag: string | null
@@ -199,6 +223,7 @@ export type Database = {
       }
       poules: {
         Row: {
+          approval_status: Database["public"]["Enums"]["approval_status"]
           created_at: string
           creator_id: string
           deadline: string | null
@@ -214,6 +239,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          approval_status?: Database["public"]["Enums"]["approval_status"]
           created_at?: string
           creator_id: string
           deadline?: string | null
@@ -229,6 +255,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          approval_status?: Database["public"]["Enums"]["approval_status"]
           created_at?: string
           creator_id?: string
           deadline?: string | null
@@ -445,6 +472,47 @@ export type Database = {
         }
         Relationships: []
       }
+      winner_predictions: {
+        Row: {
+          country: string
+          country_flag: string | null
+          created_at: string
+          id: string
+          points_earned: number
+          poule_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          country: string
+          country_flag?: string | null
+          created_at?: string
+          id?: string
+          points_earned?: number
+          poule_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          country?: string
+          country_flag?: string | null
+          created_at?: string
+          id?: string
+          points_earned?: number
+          poule_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "winner_predictions_poule_id_fkey"
+            columns: ["poule_id"]
+            isOneToOne: false
+            referencedRelation: "poules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       wk_players: {
         Row: {
           age: number
@@ -507,6 +575,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
+      approval_status: "pending" | "approved" | "rejected"
       match_status: "pending" | "live" | "finished"
       payment_status: "pending" | "succeeded" | "failed" | "refunded"
       poule_status: "open" | "closed" | "finished"
@@ -638,6 +707,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "moderator", "user"],
+      approval_status: ["pending", "approved", "rejected"],
       match_status: ["pending", "live", "finished"],
       payment_status: ["pending", "succeeded", "failed", "refunded"],
       poule_status: ["open", "closed", "finished"],
