@@ -212,6 +212,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          is_ai_generated: boolean
           match_id: string
           points_earned: number | null
           poule_id: string
@@ -223,6 +224,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          is_ai_generated?: boolean
           match_id: string
           points_earned?: number | null
           poule_id: string
@@ -234,6 +236,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          is_ai_generated?: boolean
           match_id?: string
           points_earned?: number | null
           poule_id?: string
