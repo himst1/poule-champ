@@ -412,7 +412,7 @@ export type Database = {
             foreignKeyName: "topscorer_predictions_player_id_fkey"
             columns: ["player_id"]
             isOneToOne: false
-            referencedRelation: "players"
+            referencedRelation: "wk_players"
             referencedColumns: ["id"]
           },
           {
