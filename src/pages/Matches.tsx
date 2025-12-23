@@ -206,13 +206,23 @@ const Matches = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Toggle favorite country
+  // Toggle favorite country - automatically enable filter when selecting
   const toggleFavorite = (country: string) => {
     setFavoriteCountries(prev => {
       const newFavorites = prev.includes(country)
         ? prev.filter(c => c !== country)
         : [...prev, country];
       localStorage.setItem("favoriteCountries", JSON.stringify(newFavorites));
+      
+      // Automatically enable filter when adding a favorite
+      if (!prev.includes(country) && newFavorites.length > 0) {
+        setShowOnlyFavorites(true);
+      }
+      // Automatically disable filter when removing the last favorite
+      if (prev.includes(country) && newFavorites.length === 0) {
+        setShowOnlyFavorites(false);
+      }
+      
       return newFavorites;
     });
   };
@@ -372,7 +382,9 @@ const Matches = () => {
       const dateMatch = !selectedDate || matchDate === selectedDate;
       
       // Favorite countries filter
-      const favoriteMatch = !showOnlyFavorites || favoriteCountries.length === 0 || 
+      // Favorite countries filter - when favorites are selected AND showOnlyFavorites is true
+      // OR when favorites are selected (auto-filter when you have favorites)
+      const favoriteMatch = favoriteCountries.length === 0 || !showOnlyFavorites || 
         favoriteCountries.includes(match.home_team) || 
         favoriteCountries.includes(match.away_team);
       

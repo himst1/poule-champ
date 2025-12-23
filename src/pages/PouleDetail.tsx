@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Trophy, Users, ArrowLeft, Share2, Copy, Check, Target, Loader2, Lock, Clock, Brain } from "lucide-react";
+import { Trophy, Users, ArrowLeft, Share2, Copy, Check, Target, Loader2, Lock, Clock, Brain, Star, StarOff, Calendar, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,26 @@ import { nl } from "date-fns/locale";
 import { BulkAIPredictionModal } from "@/components/BulkAIPredictionModal";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { AIPredictionModal } from "@/components/AIPredictionModal";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
+
+// Get all unique country names from COUNTRY_CODES (defined below)
+const ALL_COUNTRIES = [
+  "Argentinië", "Australië", "Bahrein", "België", "Bolivia", "Brazilië",
+  "Canada", "Chili", "China", "Colombia", "Costa Rica", "Denemarken",
+  "Duitsland", "Ecuador", "Egypte", "El Salvador", "Engeland", "Finland",
+  "Frankrijk", "Ghana", "Griekenland", "Guatemala", "Honduras", "Hongarije",
+  "Ierland", "India", "Indonesië", "Irak", "Iran", "Italië", "Ivoorkust",
+  "Jamaica", "Japan", "Jordanië", "Kameroen", "Kroatië", "Mali", "Marokko",
+  "Mexico", "Nederland", "Nieuw-Zeeland", "Nigeria", "Noorwegen", "Oekraïne",
+  "Oezbekistan", "Oman", "Oostenrijk", "Panama", "Paraguay", "Peru", "Polen",
+  "Portugal", "Qatar", "Roemenië", "Saoedi-Arabië", "Schotland", "Senegal",
+  "Servië", "Slovenië", "Slowakije", "Spanje", "Thailand", "Trinidad en Tobago",
+  "Tsjechië", "Tunesië", "Turkije", "Uruguay", "VAE", "Venezuela",
+  "Verenigde Staten", "Vietnam", "Wales", "Zuid-Afrika", "Zuid-Korea", "Zweden",
+  "Zwitserland"
+];
 
 // Countdown hook for upcoming matches
 const useCountdown = (targetDate: Date) => {
@@ -213,6 +233,35 @@ const PouleDetail = () => {
   const [copied, setCopied] = useState(false);
   const [showBulkAIPrediction, setShowBulkAIPrediction] = useState(false);
   const [bulkPredictions, setBulkPredictions] = useState<Record<string, { homeScore: number; awayScore: number }>>({});
+  
+  // Filter states
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [favoriteCountries, setFavoriteCountries] = useState<string[]>(() => {
+    const saved = localStorage.getItem("favoriteCountries");
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [showOnlyFavorites, setShowOnlyFavorites] = useState(false);
+
+  // Toggle favorite country - automatically enable filter when selecting
+  const toggleFavorite = (country: string) => {
+    setFavoriteCountries(prev => {
+      const newFavorites = prev.includes(country)
+        ? prev.filter(c => c !== country)
+        : [...prev, country];
+      localStorage.setItem("favoriteCountries", JSON.stringify(newFavorites));
+      
+      // Automatically enable filter when adding a favorite
+      if (!prev.includes(country) && newFavorites.length > 0) {
+        setShowOnlyFavorites(true);
+      }
+      // Automatically disable filter when removing the last favorite
+      if (prev.includes(country) && newFavorites.length === 0) {
+        setShowOnlyFavorites(false);
+      }
+      
+      return newFavorites;
+    });
+  };
 
   // Handle bulk predictions applied
   const handleBulkPredictionsApplied = (predictions: { matchId: string; homeScore: number; awayScore: number }[]) => {
@@ -279,17 +328,43 @@ const PouleDetail = () => {
     },
   });
 
-  // First 10 matches for display
-  const displayMatches = matches?.slice(0, 10) || [];
-
-  // Get predictable matches (pending matches that haven't started yet)
-  const predictableMatches = useMemo(() => {
+  // Available dates for filter
+  const availableDates = useMemo(() => {
     if (!matches) return [];
+    const dates = new Set(matches.map(m => format(parseISO(m.kickoff_time), "yyyy-MM-dd")));
+    return Array.from(dates).sort();
+  }, [matches]);
+
+  // Filter matches based on date and favorite countries
+  const filteredMatches = useMemo(() => {
+    if (!matches) return [];
+    
     return matches.filter(match => {
+      const kickoffDate = parseISO(match.kickoff_time);
+      if (!isBefore(new Date(), kickoffDate)) return false; // Only future matches
+      
+      const matchDate = format(kickoffDate, "yyyy-MM-dd");
+      const dateMatch = !selectedDate || matchDate === selectedDate;
+      
+      // Favorite countries filter
+      const favoriteMatch = favoriteCountries.length === 0 || !showOnlyFavorites || 
+        favoriteCountries.includes(match.home_team) || 
+        favoriteCountries.includes(match.away_team);
+      
+      return dateMatch && favoriteMatch;
+    });
+  }, [matches, selectedDate, showOnlyFavorites, favoriteCountries]);
+
+  // Display matches (first 20 filtered)
+  const displayMatches = filteredMatches.slice(0, 20);
+
+  // Get predictable matches (for bulk AI - use filtered)
+  const predictableMatches = useMemo(() => {
+    return filteredMatches.filter(match => {
       const kickoffDate = parseISO(match.kickoff_time);
       return isBefore(new Date(), kickoffDate);
     });
-  }, [matches]);
+  }, [filteredMatches]);
 
   // Fetch user's predictions for this poule
   const { data: predictions } = useQuery({
@@ -500,7 +575,8 @@ const PouleDetail = () => {
 
           {activeTab === "matches" && (
             <div className="space-y-4">
-              <div className="flex items-center justify-between mb-4">
+              {/* Header with Bulk AI button */}
+              <div className="flex items-center justify-between mb-2">
                 <h2 className="font-display font-bold text-lg">Komende Wedstrijden</h2>
                 {user && predictableMatches.length > 0 && (
                   <Button
@@ -517,6 +593,144 @@ const PouleDetail = () => {
                   </Button>
                 )}
               </div>
+
+              {/* Filters */}
+              <div className="glass-card rounded-xl p-4 space-y-4">
+                <div className="flex flex-col sm:flex-row gap-4">
+                  {/* Date Filter */}
+                  <div className="sm:w-48">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Calendar className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-xs font-medium text-muted-foreground">Datum</span>
+                    </div>
+                    <select
+                      value={selectedDate || ""}
+                      onChange={(e) => setSelectedDate(e.target.value || null)}
+                      className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    >
+                      <option value="">Alle datums</option>
+                      {availableDates.map(date => (
+                        <option key={date} value={date}>
+                          {format(parseISO(date), "d MMM yyyy", { locale: nl })}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Favorite Countries Filter */}
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Star className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-xs font-medium text-muted-foreground">Favoriete landen</span>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" size="sm" className="gap-2">
+                            <Star className="w-4 h-4" />
+                            Selecteer
+                            {favoriteCountries.length > 0 && (
+                              <span className="bg-primary text-primary-foreground text-xs px-1.5 py-0.5 rounded-full">
+                                {favoriteCountries.length}
+                              </span>
+                            )}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-72 p-0" align="start">
+                          <div className="p-3 border-b border-border">
+                            <h4 className="font-medium text-sm">Kies favoriete landen</h4>
+                          </div>
+                          <ScrollArea className="h-64">
+                            <div className="p-2 space-y-1">
+                              {ALL_COUNTRIES.map(country => (
+                                <label
+                                  key={country}
+                                  className="flex items-center gap-3 px-2 py-1.5 rounded-md hover:bg-secondary cursor-pointer"
+                                >
+                                  <Checkbox
+                                    checked={favoriteCountries.includes(country)}
+                                    onCheckedChange={() => toggleFavorite(country)}
+                                  />
+                                  <FlagImage teamName={country} size="sm" />
+                                  <span className="text-sm">{country}</span>
+                                </label>
+                              ))}
+                            </div>
+                          </ScrollArea>
+                        </PopoverContent>
+                      </Popover>
+
+                      {/* Show selected favorites as chips */}
+                      {favoriteCountries.slice(0, 3).map(country => (
+                        <div
+                          key={country}
+                          className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-primary/10 border border-primary/20"
+                        >
+                          <FlagImage teamName={country} size="sm" />
+                          <span className="text-xs font-medium">{country}</span>
+                          <button
+                            onClick={() => toggleFavorite(country)}
+                            className="text-muted-foreground hover:text-foreground"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                      {favoriteCountries.length > 3 && (
+                        <span className="text-xs text-muted-foreground">
+                          +{favoriteCountries.length - 3} meer
+                        </span>
+                      )}
+
+                      {/* Toggle to show only favorites */}
+                      {favoriteCountries.length > 0 && (
+                        <Button
+                          variant={showOnlyFavorites ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setShowOnlyFavorites(!showOnlyFavorites)}
+                          className={showOnlyFavorites ? "glow-primary" : ""}
+                        >
+                          {showOnlyFavorites ? (
+                            <>
+                              <Star className="w-3 h-3 mr-1 fill-current" />
+                              Alleen favorieten
+                            </>
+                          ) : (
+                            <>
+                              <StarOff className="w-3 h-3 mr-1" />
+                              Alle landen
+                            </>
+                          )}
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Results count */}
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">
+                    <span className="text-foreground font-medium">{filteredMatches.length}</span> wedstrijden
+                    {showOnlyFavorites && favoriteCountries.length > 0 && (
+                      <span className="text-primary ml-1">({favoriteCountries.join(", ")})</span>
+                    )}
+                  </span>
+                  {(selectedDate || showOnlyFavorites) && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedDate(null);
+                        setShowOnlyFavorites(false);
+                      }}
+                    >
+                      Filters wissen
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              {/* Match Cards */}
               {displayMatches && displayMatches.length > 0 ? (
                 displayMatches.map((match) => (
                   <MatchPredictionCard
@@ -531,7 +745,9 @@ const PouleDetail = () => {
                 ))
               ) : (
                 <Card className="p-8 text-center text-muted-foreground">
-                  Geen komende wedstrijden
+                  {selectedDate || showOnlyFavorites 
+                    ? "Geen wedstrijden gevonden met deze filters" 
+                    : "Geen komende wedstrijden"}
                 </Card>
               )}
               <Button variant="outline" className="w-full" onClick={() => navigate("/matches")}>
