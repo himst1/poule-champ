@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, Users, Goal, Shield, Shirt, User, Plus, Trash2, Upload, FileJson } from "lucide-react";
+import { Search, Users, Goal, Shield, Shirt, User, Plus, Trash2, FileJson } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -190,7 +190,7 @@ const Players = () => {
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCountry, setSelectedCountry] = useState<string>("all");
-  const [showBulkImport, setShowBulkImport] = useState(false);
+  
   const [bulkJsonInput, setBulkJsonInput] = useState("");
   const [bulkImportError, setBulkImportError] = useState("");
   const [isImporting, setIsImporting] = useState(false);
@@ -383,7 +383,7 @@ const Players = () => {
       queryClient.invalidateQueries({ queryKey: ["wk-players"] });
       toast.success(`${playersToInsert.length} spelers succesvol geïmporteerd!`);
       setBulkJsonInput("");
-      setShowBulkImport(false);
+      
     } catch (error) {
       const message = error instanceof Error ? error.message : "Onbekende fout";
       setBulkImportError(message);
@@ -561,72 +561,45 @@ const Players = () => {
                       >
                         {addPlayerMutation.isPending ? "Bezig..." : "Speler toevoegen"}
                       </Button>
+                    </form>
 
-                      <div className="relative">
-                        <div className="absolute inset-0 flex items-center">
-                          <span className="w-full border-t" />
-                        </div>
-                        <div className="relative flex justify-center text-xs uppercase">
-                          <span className="bg-card px-2 text-muted-foreground">of</span>
-                        </div>
+                    {/* Bulk Import Section - Always visible */}
+                    <div className="mt-6 pt-6 border-t space-y-4">
+                      <div className="flex items-center gap-2">
+                        <FileJson className="w-5 h-5 text-primary" />
+                        <h4 className="font-medium">Bulk Import</h4>
+                      </div>
+                      
+                      <div className="text-xs text-muted-foreground">
+                        <p className="mb-1">Formaat:</p>
+                        <pre className="bg-secondary/50 p-2 rounded text-[10px] overflow-x-auto">
+{`[{"land":"BR","naam":"...","leeftijd":25,"positie":"...","interlands":10,"doelpunten":5}]`}
+                        </pre>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Textarea
+                          placeholder="Plak hier je JSON data..."
+                          value={bulkJsonInput}
+                          onChange={(e) => {
+                            setBulkJsonInput(e.target.value);
+                            setBulkImportError("");
+                          }}
+                          className="min-h-[120px] font-mono text-xs"
+                        />
+                        {bulkImportError && (
+                          <p className="text-xs text-destructive whitespace-pre-wrap">{bulkImportError}</p>
+                        )}
                       </div>
 
                       <Button 
-                        type="button"
-                        variant="outline" 
+                        onClick={handleBulkImport}
+                        disabled={isImporting || !bulkJsonInput.trim()}
                         className="w-full"
-                        onClick={() => setShowBulkImport(!showBulkImport)}
                       >
-                        <Upload className="w-4 h-4 mr-2" />
-                        Bulk Import (JSON)
+                        {isImporting ? "Importeren..." : "Importeer Spelers"}
                       </Button>
-                    </form>
-
-                    {/* Bulk Import Section */}
-                    {showBulkImport && (
-                      <div className="mt-6 pt-6 border-t space-y-4">
-                        <div className="flex items-center gap-2">
-                          <FileJson className="w-5 h-5 text-primary" />
-                          <h4 className="font-medium">Bulk Import</h4>
-                        </div>
-                        
-                        <div className="text-xs text-muted-foreground space-y-2">
-                          <p>Plak JSON in dit formaat:</p>
-                          <pre className="bg-secondary/50 p-2 rounded text-[10px] overflow-x-auto">
-{`[
-  {"land": "NL", "naam": "Van Dijk", "leeftijd": 34, "positie": "Verdediger", "interlands": 88, "doelpunten": 11},
-  {"land": "NL", "naam": "Depay", "leeftijd": 31, "positie": "Aanvaller", "interlands": 108, "doelpunten": 55}
-]`}
-                          </pre>
-                          <p className="text-[10px]">
-                            Landcodes: NL, DE, FR, BE, ES, IT, PT, EN, BR, AR, etc.
-                          </p>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Textarea
-                            placeholder="Plak hier je JSON data..."
-                            value={bulkJsonInput}
-                            onChange={(e) => {
-                              setBulkJsonInput(e.target.value);
-                              setBulkImportError("");
-                            }}
-                            className="min-h-[150px] font-mono text-xs"
-                          />
-                          {bulkImportError && (
-                            <p className="text-xs text-destructive whitespace-pre-wrap">{bulkImportError}</p>
-                          )}
-                        </div>
-
-                        <Button 
-                          onClick={handleBulkImport}
-                          disabled={isImporting || !bulkJsonInput.trim()}
-                          className="w-full"
-                        >
-                          {isImporting ? "Importeren..." : "Importeer Spelers"}
-                        </Button>
-                      </div>
-                    )}
+                    </div>
                   </CardContent>
                 </Card>
               </div>
