@@ -41,24 +41,66 @@ const PHASES = [
   "Achtste finale", "Kwartfinale", "Halve finale", "Troostfinale", "Finale"
 ];
 
-// Country code to flag emoji conversion
-const getCountryFlag = (countryCode: string | null): string => {
-  if (!countryCode) return "🏳️";
+// Team name to ISO country code mapping for WK 2026
+const COUNTRY_CODES: Record<string, string> = {
+  // Group A - North America
+  "Verenigde Staten": "us", "VS": "us", "USA": "us",
+  "Mexico": "mx", "Canada": "ca",
+  // Europe
+  "Nederland": "nl", "Duitsland": "de", "Frankrijk": "fr", "Spanje": "es",
+  "Engeland": "gb-eng", "Italië": "it", "Portugal": "pt", "België": "be",
+  "Kroatië": "hr", "Zwitserland": "ch", "Denemarken": "dk", "Polen": "pl",
+  "Servië": "rs", "Oekraïne": "ua", "Oostenrijk": "at", "Tsjechië": "cz",
+  "Wales": "gb-wls", "Schotland": "gb-sct", "Zweden": "se", "Noorwegen": "no",
+  "Griekenland": "gr", "Turkije": "tr", "Roemenië": "ro", "Hongarije": "hu",
+  "Slowakije": "sk", "Slovenië": "si", "Finland": "fi", "Ierland": "ie",
+  // South America
+  "Brazilië": "br", "Argentinië": "ar", "Uruguay": "uy", "Colombia": "co",
+  "Chili": "cl", "Ecuador": "ec", "Peru": "pe", "Paraguay": "py",
+  "Venezuela": "ve", "Bolivia": "bo",
+  // Africa
+  "Marokko": "ma", "Senegal": "sn", "Ghana": "gh", "Kameroen": "cm",
+  "Nigeria": "ng", "Tunesië": "tn", "Egypte": "eg", "Algerije": "dz",
+  "Zuid-Afrika": "za", "Ivoorkust": "ci", "Mali": "ml",
+  // Asia
+  "Japan": "jp", "Zuid-Korea": "kr", "Australië": "au", "Saoedi-Arabië": "sa",
+  "Iran": "ir", "Qatar": "qa", "China": "cn", "Indonesië": "id",
+  "Bahrein": "bh", "Irak": "iq", "VAE": "ae", "Oman": "om", "Jordanië": "jo",
+  "Oezbekistan": "uz", "Thailand": "th", "Vietnam": "vn", "India": "in",
+  // CONCACAF
+  "Costa Rica": "cr", "Jamaica": "jm", "Honduras": "hn", "Panama": "pa",
+  "El Salvador": "sv", "Guatemala": "gt", "Trinidad en Tobago": "tt",
+  // Oceania
+  "Nieuw-Zeeland": "nz",
+};
+
+// Get flag image URL from Flagcdn
+const getFlagUrl = (teamName: string | null): string | null => {
+  if (!teamName) return null;
+  const code = COUNTRY_CODES[teamName];
+  if (!code) return null;
+  return `https://flagcdn.com/w40/${code.toLowerCase()}.png`;
+};
+
+// Flag image component
+const FlagImage = ({ teamName, className = "" }: { teamName: string | null; className?: string }) => {
+  const flagUrl = getFlagUrl(teamName);
+  const code = teamName ? COUNTRY_CODES[teamName]?.toUpperCase() : null;
   
-  // If it's already an emoji, return it
-  if (countryCode.length > 2 && /\p{Emoji}/u.test(countryCode)) {
-    return countryCode;
+  if (!flagUrl) {
+    return <span className={`text-muted-foreground text-xs ${className}`}>--</span>;
   }
   
-  // Convert ISO 3166-1 alpha-2 to flag emoji
-  const code = countryCode.toUpperCase().trim();
-  if (code.length !== 2) return countryCode;
-  
-  const offset = 127397; // Regional indicator symbol offset
-  const flag = String.fromCodePoint(
-    ...code.split("").map(char => char.charCodeAt(0) + offset)
+  return (
+    <img
+      src={flagUrl}
+      alt={`Vlag van ${teamName}`}
+      className={`w-6 h-4 object-cover rounded-sm shadow-sm ${className}`}
+      onError={(e) => {
+        e.currentTarget.style.display = "none";
+      }}
+    />
   );
-  return flag;
 };
 
 const Matches = () => {
@@ -405,8 +447,7 @@ const MatchRow = ({ match, prediction, isLoggedIn, userId }: MatchRowProps) => {
       {/* Home Team */}
       <div className="flex-1 flex items-center justify-end gap-2 min-w-0">
         <span className="text-sm font-medium truncate text-right">{match.home_team}</span>
-        <span className="text-xs text-muted-foreground uppercase">{match.home_flag?.slice(0, 2) || ""}</span>
-        <span className="text-xl shrink-0">{getCountryFlag(match.home_flag)}</span>
+        <FlagImage teamName={match.home_team} />
       </div>
 
       {/* Score / Prediction Input */}
@@ -451,8 +492,7 @@ const MatchRow = ({ match, prediction, isLoggedIn, userId }: MatchRowProps) => {
 
       {/* Away Team */}
       <div className="flex-1 flex items-center gap-2 min-w-0">
-        <span className="text-xl shrink-0">{getCountryFlag(match.away_flag)}</span>
-        <span className="text-xs text-muted-foreground uppercase">{match.away_flag?.slice(0, 2) || ""}</span>
+        <FlagImage teamName={match.away_team} />
         <span className="text-sm font-medium truncate">{match.away_team}</span>
       </div>
 
