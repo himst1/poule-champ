@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/accordion";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
+import ScrollIndicator from "@/components/ScrollIndicator";
 import { useState, useEffect } from "react";
 
 const sections = [
@@ -88,6 +89,7 @@ const Guide = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
+      <ScrollIndicator />
       
       <main className="pt-24 pb-16">
         {/* Hero Section */}
