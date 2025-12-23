@@ -22,6 +22,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { PouleManagement } from "@/components/PouleManagement";
 import { MatchDeadlineBadge } from "@/components/DeadlineWarning";
 import { MatchdayOverview } from "@/components/MatchdayOverview";
+import TopscorerVoting from "@/components/TopscorerVoting";
 // Get all unique country names from COUNTRY_CODES (defined below)
 const ALL_COUNTRIES = [
   "Argentinië", "Australië", "Bahrein", "België", "Bolivia", "Brazilië",
@@ -234,7 +235,7 @@ const PouleDetail = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<"ranking" | "matches" | "predictions">("ranking");
+  const [activeTab, setActiveTab] = useState<"ranking" | "matches" | "predictions" | "topscorer">("ranking");
   const [copied, setCopied] = useState(false);
   const [showBulkAIPrediction, setShowBulkAIPrediction] = useState(false);
   const [bulkPredictions, setBulkPredictions] = useState<Record<string, { homeScore: number; awayScore: number }>>({});

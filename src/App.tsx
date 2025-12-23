@@ -11,6 +11,8 @@ import CreatePoule from "./pages/CreatePoule";
 import PouleManagement from "./pages/PouleManagement";
 import Matches from "./pages/Matches";
 import AdminMatches from "./pages/AdminMatches";
+import Players from "./pages/Players";
+import AdminPlayers from "./pages/AdminPlayers";
 import Auth from "./pages/Auth";
 import Guide from "./pages/Guide";
 import NotFound from "./pages/NotFound";
@@ -33,6 +35,8 @@ const App = () => (
             <Route path="/poule-management" element={<PouleManagement />} />
             <Route path="/matches" element={<Matches />} />
             <Route path="/admin/matches" element={<AdminMatches />} />
+            <Route path="/players" element={<Players />} />
+            <Route path="/admin/players" element={<AdminPlayers />} />
             <Route path="/handleiding" element={<Guide />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
