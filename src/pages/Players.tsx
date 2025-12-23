@@ -6,6 +6,7 @@ import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -17,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, Users, Goal, Shield, Shirt, User, Plus, Trash2 } from "lucide-react";
+import { Search, Users, Goal, Shield, Shirt, User, Plus, Trash2, Upload, FileJson } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -66,6 +67,31 @@ const WK_2026_COUNTRIES = [
   { name: "Zweden", flag: "🇸🇪" },
   { name: "Zwitserland", flag: "🇨🇭" },
 ];
+
+// Land code mapping voor bulk import
+const COUNTRY_CODE_MAP: Record<string, string> = {
+  "AR": "Argentinië", "AU": "Australië", "BE": "België", "BR": "Brazilië",
+  "CA": "Canada", "CL": "Chili", "CO": "Colombia", "CR": "Costa Rica",
+  "DK": "Denemarken", "DE": "Duitsland", "EC": "Ecuador", "EN": "Engeland",
+  "FR": "Frankrijk", "GH": "Ghana", "IR": "Iran", "IT": "Italië",
+  "JP": "Japan", "CM": "Kameroen", "HR": "Kroatië", "MA": "Marokko",
+  "MX": "Mexico", "NL": "Nederland", "NG": "Nigeria", "UA": "Oekraïne",
+  "PY": "Paraguay", "PE": "Peru", "PL": "Polen", "PT": "Portugal",
+  "QA": "Qatar", "SA": "Saoedi-Arabië", "SN": "Senegal", "RS": "Servië",
+  "ES": "Spanje", "TN": "Tunesië", "TR": "Turkije", "UY": "Uruguay",
+  "US": "Verenigde Staten", "WA": "Wales", "KR": "Zuid-Korea", "SE": "Zweden",
+  "CH": "Zwitserland",
+};
+
+// Bulk import schema
+const bulkPlayerSchema = z.object({
+  land: z.string().min(2).max(50),
+  naam: z.string().min(2).max(100),
+  leeftijd: z.number().int().min(15).max(50),
+  positie: z.enum(["Keeper", "Verdediger", "Middenvelder", "Aanvaller"]),
+  interlands: z.number().int().min(0).max(300),
+  doelpunten: z.number().int().min(0).max(200),
+});
 
 // Validation schema
 const playerSchema = z.object({
@@ -164,6 +190,10 @@ const Players = () => {
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCountry, setSelectedCountry] = useState<string>("all");
+  const [showBulkImport, setShowBulkImport] = useState(false);
+  const [bulkJsonInput, setBulkJsonInput] = useState("");
+  const [bulkImportError, setBulkImportError] = useState("");
+  const [isImporting, setIsImporting] = useState(false);
   
   // Form state
   const [formData, setFormData] = useState({
@@ -261,6 +291,105 @@ const Players = () => {
 
     setFormErrors({});
     addPlayerMutation.mutate(result.data);
+  };
+
+  // Bulk import handler
+  const handleBulkImport = async () => {
+    setBulkImportError("");
+    setIsImporting(true);
+
+    try {
+      // Parse JSON
+      let parsedData: unknown[];
+      try {
+        parsedData = JSON.parse(bulkJsonInput);
+      } catch {
+        throw new Error("Ongeldige JSON. Controleer de syntax.");
+      }
+
+      if (!Array.isArray(parsedData)) {
+        throw new Error("Data moet een array zijn.");
+      }
+
+      if (parsedData.length === 0) {
+        throw new Error("Array is leeg.");
+      }
+
+      if (parsedData.length > 100) {
+        throw new Error("Maximum 100 spelers per keer.");
+      }
+
+      // Validate and transform each player
+      const playersToInsert: Array<{
+        name: string;
+        country: string;
+        country_flag: string | null;
+        position: string;
+        age: number;
+        international_caps: number;
+        goals: number;
+      }> = [];
+
+      const errors: string[] = [];
+
+      parsedData.forEach((item, index) => {
+        const result = bulkPlayerSchema.safeParse(item);
+        if (!result.success) {
+          errors.push(`Rij ${index + 1}: ${result.error.errors.map(e => e.message).join(", ")}`);
+          return;
+        }
+
+        const data = result.data;
+        
+        // Map country code to full name
+        let countryName = COUNTRY_CODE_MAP[data.land.toUpperCase()];
+        if (!countryName) {
+          // Check if it's already a full country name
+          const foundCountry = WK_2026_COUNTRIES.find(
+            c => c.name.toLowerCase() === data.land.toLowerCase()
+          );
+          countryName = foundCountry?.name;
+        }
+
+        if (!countryName) {
+          errors.push(`Rij ${index + 1}: Onbekend land "${data.land}"`);
+          return;
+        }
+
+        const countryInfo = WK_2026_COUNTRIES.find(c => c.name === countryName);
+
+        playersToInsert.push({
+          name: data.naam,
+          country: countryName,
+          country_flag: countryInfo?.flag || null,
+          position: data.positie,
+          age: data.leeftijd,
+          international_caps: data.interlands,
+          goals: data.doelpunten,
+        });
+      });
+
+      if (errors.length > 0) {
+        throw new Error(`Validatiefouten:\n${errors.slice(0, 5).join("\n")}${errors.length > 5 ? `\n...en ${errors.length - 5} meer` : ""}`);
+      }
+
+      // Insert all players
+      const { error: insertError } = await supabase
+        .from("wk_players")
+        .insert(playersToInsert);
+
+      if (insertError) throw insertError;
+
+      queryClient.invalidateQueries({ queryKey: ["wk-players"] });
+      toast.success(`${playersToInsert.length} spelers succesvol geïmporteerd!`);
+      setBulkJsonInput("");
+      setShowBulkImport(false);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Onbekende fout";
+      setBulkImportError(message);
+    } finally {
+      setIsImporting(false);
+    }
   };
 
   // Get unique countries from players
@@ -432,7 +561,72 @@ const Players = () => {
                       >
                         {addPlayerMutation.isPending ? "Bezig..." : "Speler toevoegen"}
                       </Button>
+
+                      <div className="relative">
+                        <div className="absolute inset-0 flex items-center">
+                          <span className="w-full border-t" />
+                        </div>
+                        <div className="relative flex justify-center text-xs uppercase">
+                          <span className="bg-card px-2 text-muted-foreground">of</span>
+                        </div>
+                      </div>
+
+                      <Button 
+                        type="button"
+                        variant="outline" 
+                        className="w-full"
+                        onClick={() => setShowBulkImport(!showBulkImport)}
+                      >
+                        <Upload className="w-4 h-4 mr-2" />
+                        Bulk Import (JSON)
+                      </Button>
                     </form>
+
+                    {/* Bulk Import Section */}
+                    {showBulkImport && (
+                      <div className="mt-6 pt-6 border-t space-y-4">
+                        <div className="flex items-center gap-2">
+                          <FileJson className="w-5 h-5 text-primary" />
+                          <h4 className="font-medium">Bulk Import</h4>
+                        </div>
+                        
+                        <div className="text-xs text-muted-foreground space-y-2">
+                          <p>Plak JSON in dit formaat:</p>
+                          <pre className="bg-secondary/50 p-2 rounded text-[10px] overflow-x-auto">
+{`[
+  {"land": "NL", "naam": "Van Dijk", "leeftijd": 34, "positie": "Verdediger", "interlands": 88, "doelpunten": 11},
+  {"land": "NL", "naam": "Depay", "leeftijd": 31, "positie": "Aanvaller", "interlands": 108, "doelpunten": 55}
+]`}
+                          </pre>
+                          <p className="text-[10px]">
+                            Landcodes: NL, DE, FR, BE, ES, IT, PT, EN, BR, AR, etc.
+                          </p>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Textarea
+                            placeholder="Plak hier je JSON data..."
+                            value={bulkJsonInput}
+                            onChange={(e) => {
+                              setBulkJsonInput(e.target.value);
+                              setBulkImportError("");
+                            }}
+                            className="min-h-[150px] font-mono text-xs"
+                          />
+                          {bulkImportError && (
+                            <p className="text-xs text-destructive whitespace-pre-wrap">{bulkImportError}</p>
+                          )}
+                        </div>
+
+                        <Button 
+                          onClick={handleBulkImport}
+                          disabled={isImporting || !bulkJsonInput.trim()}
+                          className="w-full"
+                        >
+                          {isImporting ? "Importeren..." : "Importeer Spelers"}
+                        </Button>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </div>
