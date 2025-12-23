@@ -10,6 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { AIPredictionStats } from "@/components/AIPredictionStats";
 
 type PouleWithMembership = {
   id: string;
@@ -288,6 +289,9 @@ const Dashboard = () => {
               </div>
             </div>
           </div>
+
+          {/* AI Prediction Stats */}
+          <AIPredictionStats />
 
           {/* My Poules */}
           <div className="flex items-center justify-between mb-6">
