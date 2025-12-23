@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Users, Settings, Crown, Trophy, ArrowLeft, Copy, Plus, Trash2, UserMinus } from "lucide-react";
+import { Users, Settings, Crown, Trophy, ArrowLeft, Plus, Trash2, UserMinus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -10,6 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import InviteQRCode from "@/components/InviteQRCode";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -375,14 +376,10 @@ const PouleManagement = () => {
                   </div>
 
                   {isOwner && selectedPouleData?.invite_code && (
-                    <Button
-                      variant="outline"
-                      className="gap-2"
-                      onClick={() => copyInviteCode(selectedPouleData.invite_code!)}
-                    >
-                      <Copy className="w-4 h-4" />
-                      Code: {selectedPouleData.invite_code}
-                    </Button>
+                    <InviteQRCode 
+                      inviteCode={selectedPouleData.invite_code} 
+                      pouleName={selectedPouleData.name}
+                    />
                   )}
                 </div>
               </Card>
