@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
+import ThemeToggle from "@/components/ThemeToggle";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -29,8 +30,8 @@ const Header = () => {
             </span>
           </a>
 
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-6">
+          {/* Desktop Navigation - hidden on mobile and tablet */}
+          <nav className="hidden lg:flex items-center gap-6">
             <a href="/matches" className="text-muted-foreground hover:text-foreground transition-colors">
               Wedstrijden
             </a>
@@ -56,8 +57,9 @@ const Header = () => {
             </a>
           </nav>
 
-          {/* CTA Buttons */}
-          <div className="hidden md:flex items-center gap-3">
+          {/* CTA Buttons - Desktop only */}
+          <div className="hidden lg:flex items-center gap-3">
+            <ThemeToggle />
             {loading ? null : user ? (
               <>
                 <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary border border-border">
@@ -81,43 +83,71 @@ const Header = () => {
             )}
           </div>
 
-          {/* Mobile Menu Button */}
-          <button
-            className="md:hidden p-2 text-foreground"
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-          >
-            {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </button>
+          {/* Mobile/Tablet Controls */}
+          <div className="flex lg:hidden items-center gap-2">
+            <ThemeToggle />
+            <button
+              className="p-2 text-foreground hover:bg-secondary rounded-lg transition-colors"
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              aria-label={isMenuOpen ? "Menu sluiten" : "Menu openen"}
+            >
+              {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
+          </div>
         </div>
 
-        {/* Mobile Menu */}
+        {/* Mobile/Tablet Menu */}
         {isMenuOpen && (
-          <div className="md:hidden py-4 border-t border-border/50 animate-fade-in">
+          <div className="lg:hidden py-4 border-t border-border/50 animate-fade-in">
             <nav className="flex flex-col gap-4">
-              <a href="/matches" className="text-muted-foreground hover:text-foreground transition-colors">
+              <a 
+                href="/matches" 
+                className="text-muted-foreground hover:text-foreground transition-colors py-2"
+                onClick={() => setIsMenuOpen(false)}
+              >
                 Wedstrijden
               </a>
               {user && (
                 <>
-                  <a href="/dashboard" className="text-muted-foreground hover:text-foreground transition-colors">
+                  <a 
+                    href="/dashboard" 
+                    className="text-muted-foreground hover:text-foreground transition-colors py-2"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
                     Dashboard
                   </a>
-                  <a href="/poule-management" className="text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5">
+                  <a 
+                    href="/poule-management" 
+                    className="text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5 py-2"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
                     <Settings className="w-4 h-4" />
                     Poule Beheer
                   </a>
                 </>
               )}
-              <a href="#features" className="text-muted-foreground hover:text-foreground transition-colors">
+              <a 
+                href="#features" 
+                className="text-muted-foreground hover:text-foreground transition-colors py-2"
+                onClick={() => setIsMenuOpen(false)}
+              >
                 Features
               </a>
-              <a href="#how-it-works" className="text-muted-foreground hover:text-foreground transition-colors">
+              <a 
+                href="#how-it-works" 
+                className="text-muted-foreground hover:text-foreground transition-colors py-2"
+                onClick={() => setIsMenuOpen(false)}
+              >
                 Hoe werkt het
               </a>
-              <a href="/handleiding" className="text-muted-foreground hover:text-foreground transition-colors">
+              <a 
+                href="/handleiding" 
+                className="text-muted-foreground hover:text-foreground transition-colors py-2"
+                onClick={() => setIsMenuOpen(false)}
+              >
                 Handleiding
               </a>
-              <div className="flex flex-col gap-2 pt-4 border-t border-border/50">
+              <div className="flex flex-col gap-3 pt-4 border-t border-border/50">
                 {user ? (
                   <>
                     <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-secondary">
