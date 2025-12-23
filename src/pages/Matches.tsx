@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -7,8 +7,8 @@ import Footer from "@/components/layout/Footer";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Calendar, Filter, Trophy, Clock, Check, X, LogIn, Loader2 } from "lucide-react";
-import { format, parseISO, isBefore, differenceInSeconds } from "date-fns";
+import { Calendar, Filter, Trophy, Clock, Check, X, LogIn, Loader2, Bell, BellOff } from "lucide-react";
+import { format, parseISO, isBefore, differenceInSeconds, differenceInMinutes } from "date-fns";
 import { nl } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
@@ -167,8 +167,61 @@ const FlagImage = ({ teamName, className = "" }: { teamName: string | null; clas
 const Matches = () => {
   const [selectedPhase, setSelectedPhase] = useState("Alle fases");
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(() => {
+    return localStorage.getItem("matchNotifications") === "true";
+  });
+  const notifiedMatchesRef = useRef<Set<string>>(new Set());
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
+
+  // Play notification sound
+  const playNotificationSound = useCallback(() => {
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    
+    // Create a pleasant chime sound
+    const oscillator1 = audioContext.createOscillator();
+    const oscillator2 = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    oscillator1.connect(gainNode);
+    oscillator2.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    oscillator1.frequency.setValueAtTime(523.25, audioContext.currentTime); // C5
+    oscillator2.frequency.setValueAtTime(659.25, audioContext.currentTime); // E5
+    oscillator1.type = "sine";
+    oscillator2.type = "sine";
+    
+    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.8);
+    
+    oscillator1.start(audioContext.currentTime);
+    oscillator2.start(audioContext.currentTime);
+    oscillator1.stop(audioContext.currentTime + 0.8);
+    oscillator2.stop(audioContext.currentTime + 0.8);
+  }, []);
+
+  // Toggle notifications
+  const toggleNotifications = () => {
+    const newValue = !notificationsEnabled;
+    setNotificationsEnabled(newValue);
+    localStorage.setItem("matchNotifications", String(newValue));
+    
+    if (newValue) {
+      // Test sound when enabling
+      playNotificationSound();
+      toast({
+        title: "🔔 Notificaties ingeschakeld",
+        description: "Je krijgt een melding 5 minuten voor wedstrijdaanvang",
+      });
+    } else {
+      toast({
+        title: "🔕 Notificaties uitgeschakeld",
+        description: "Je ontvangt geen meldingen meer",
+      });
+    }
+  };
 
   const { data: matches, isLoading } = useQuery({
     queryKey: ["matches"],
@@ -182,6 +235,41 @@ const Matches = () => {
       return data as Match[];
     },
   });
+
+  // Check for upcoming matches and show notification
+  useEffect(() => {
+    if (!notificationsEnabled || !matches) return;
+
+    const checkUpcomingMatches = () => {
+      const now = new Date();
+      
+      matches.forEach(match => {
+        if (match.status !== "pending") return;
+        
+        const kickoffDate = parseISO(match.kickoff_time);
+        const minutesUntilKickoff = differenceInMinutes(kickoffDate, now);
+        
+        // Notify when match is between 4-5 minutes away (to avoid repeat notifications)
+        if (minutesUntilKickoff >= 4 && minutesUntilKickoff <= 5 && !notifiedMatchesRef.current.has(match.id)) {
+          notifiedMatchesRef.current.add(match.id);
+          
+          playNotificationSound();
+          
+          toast({
+            title: "⚽ Wedstrijd begint zo!",
+            description: `${match.home_team} vs ${match.away_team} begint over ${minutesUntilKickoff} minuten`,
+            duration: 10000,
+          });
+        }
+      });
+    };
+
+    // Check immediately and then every 30 seconds
+    checkUpcomingMatches();
+    const interval = setInterval(checkUpcomingMatches, 30000);
+
+    return () => clearInterval(interval);
+  }, [notificationsEnabled, matches, playNotificationSound, toast]);
 
   // Fetch user predictions (without poule filter for now - personal predictions)
   const { data: predictions } = useQuery({
@@ -252,9 +340,29 @@ const Matches = () => {
             <h1 className="text-4xl md:text-5xl font-display font-bold mb-4">
               WK 2026 <span className="gradient-text">Wedstrijden</span>
             </h1>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-6">
               Bekijk alle 106 wedstrijden van het WK 2026 in de VS, Canada en Mexico
             </p>
+            
+            {/* Notification Toggle */}
+            <Button
+              variant={notificationsEnabled ? "default" : "outline"}
+              size="sm"
+              onClick={toggleNotifications}
+              className={notificationsEnabled ? "glow-primary" : ""}
+            >
+              {notificationsEnabled ? (
+                <>
+                  <Bell className="w-4 h-4 mr-2" />
+                  Notificaties aan
+                </>
+              ) : (
+                <>
+                  <BellOff className="w-4 h-4 mr-2" />
+                  Notificaties uit
+                </>
+              )}
+            </Button>
           </div>
 
           {/* Prediction Stats for logged in users */}
