@@ -61,15 +61,15 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
-        pitch: {
-          DEFAULT: "hsl(142 70% 45%)",
-          dark: "hsl(142 70% 35%)",
-          light: "hsl(142 70% 55%)",
+        orange: {
+          DEFAULT: "hsl(24 95% 55%)",
+          dark: "hsl(20 95% 45%)",
+          light: "hsl(28 95% 65%)",
         },
-        gold: {
-          DEFAULT: "hsl(45 93% 58%)",
-          dark: "hsl(35 90% 50%)",
-          light: "hsl(50 93% 68%)",
+        sky: {
+          DEFAULT: "hsl(195 85% 55%)",
+          dark: "hsl(205 85% 45%)",
+          light: "hsl(190 85% 65%)",
         },
       },
       borderRadius: {
@@ -103,7 +103,7 @@ export default {
       },
       backgroundImage: {
         "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",
-        "pitch-pattern": "repeating-linear-gradient(90deg, transparent, transparent 40px, hsl(142 70% 45% / 0.03) 40px, hsl(142 70% 45% / 0.03) 80px)",
+        "orange-pattern": "repeating-linear-gradient(90deg, transparent, transparent 40px, hsl(24 95% 55% / 0.03) 40px, hsl(24 95% 55% / 0.03) 80px)",
       },
     },
   },
