@@ -13,6 +13,7 @@ import Matches from "./pages/Matches";
 import AdminMatches from "./pages/AdminMatches";
 import Players from "./pages/Players";
 import AdminPlayers from "./pages/AdminPlayers";
+import Admin from "./pages/Admin";
 import Auth from "./pages/Auth";
 import Guide from "./pages/Guide";
 import NotFound from "./pages/NotFound";
@@ -34,6 +35,7 @@ const App = () => (
             <Route path="/create-poule" element={<CreatePoule />} />
             <Route path="/poule-management" element={<PouleManagement />} />
             <Route path="/matches" element={<Matches />} />
+            <Route path="/admin" element={<Admin />} />
             <Route path="/admin/matches" element={<AdminMatches />} />
             <Route path="/players" element={<Players />} />
             <Route path="/admin/players" element={<AdminPlayers />} />
