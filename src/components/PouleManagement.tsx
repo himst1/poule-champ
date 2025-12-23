@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Settings, Users, Lock, Unlock, Trash2, Loader2, AlertTriangle } from "lucide-react";
+import { Settings, Users, Lock, Unlock, Trash2, Loader2, AlertTriangle, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -32,6 +32,8 @@ import { useQueryClient } from "@tanstack/react-query";
 interface ScoringRules {
   correct_score: number;
   correct_result: number;
+  topscorer_correct?: number;
+  topscorer_in_top3?: number;
 }
 
 interface PouleManagementProps {
@@ -69,6 +71,12 @@ export const PouleManagement = ({
   );
   const [correctResultPoints, setCorrectResultPoints] = useState(
     scoringRules?.correct_result?.toString() || "2"
+  );
+  const [topscorerCorrectPoints, setTopscorerCorrectPoints] = useState(
+    scoringRules?.topscorer_correct?.toString() || "10"
+  );
+  const [topscorerTop3Points, setTopscorerTop3Points] = useState(
+    scoringRules?.topscorer_in_top3?.toString() || "3"
   );
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -108,13 +116,23 @@ export const PouleManagement = ({
     try {
       const exactScore = parseInt(exactScorePoints);
       const correctResult = parseInt(correctResultPoints);
+      const topscorerCorrect = parseInt(topscorerCorrectPoints);
+      const topscorerTop3 = parseInt(topscorerTop3Points);
 
       if (isNaN(exactScore) || isNaN(correctResult) || exactScore < 0 || correctResult < 0) {
-        throw new Error("Voer geldige punten in");
+        throw new Error("Voer geldige punten in voor wedstrijdvoorspellingen");
+      }
+
+      if (isNaN(topscorerCorrect) || isNaN(topscorerTop3) || topscorerCorrect < 0 || topscorerTop3 < 0) {
+        throw new Error("Voer geldige punten in voor topscorer");
       }
 
       if (exactScore <= correctResult) {
         throw new Error("Exacte score moet meer punten opleveren dan correct resultaat");
+      }
+
+      if (topscorerCorrect <= topscorerTop3) {
+        throw new Error("Exacte topscorer moet meer punten opleveren dan top 3");
       }
 
       const { error } = await supabase
@@ -123,6 +141,8 @@ export const PouleManagement = ({
           scoring_rules: {
             correct_score: exactScore,
             correct_result: correctResult,
+            topscorer_correct: topscorerCorrect,
+            topscorer_in_top3: topscorerTop3,
           },
         })
         .eq("id", pouleId);
@@ -131,7 +151,7 @@ export const PouleManagement = ({
 
       toast({
         title: "Puntensysteem opgeslagen",
-        description: `Exacte score: ${exactScore} pts, Correct resultaat: ${correctResult} pts`,
+        description: `Wedstrijden: ${exactScore}/${correctResult} pts • Topscorer: ${topscorerCorrect}/${topscorerTop3} pts`,
       });
 
       queryClient.invalidateQueries({ queryKey: ["poule", pouleId] });
@@ -220,7 +240,7 @@ export const PouleManagement = ({
           <Card className="p-4">
             <h3 className="font-medium mb-4 flex items-center gap-2">
               <Settings className="w-4 h-4" />
-              Puntensysteem
+              Puntensysteem - Wedstrijden
             </h3>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -249,6 +269,44 @@ export const PouleManagement = ({
                 />
                 <p className="text-xs text-muted-foreground">
                   Punten voor juiste winnaar/gelijkspel
+                </p>
+              </div>
+            </div>
+          </Card>
+
+          {/* Topscorer Scoring Rules */}
+          <Card className="p-4">
+            <h3 className="font-medium mb-4 flex items-center gap-2">
+              <Trophy className="w-4 h-4 text-primary" />
+              Puntensysteem - Topscorer
+            </h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="topscorer-correct">Exacte topscorer</Label>
+                <Input
+                  id="topscorer-correct"
+                  type="number"
+                  min="0"
+                  value={topscorerCorrectPoints}
+                  onChange={(e) => setTopscorerCorrectPoints(e.target.value)}
+                  placeholder="10"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Punten voor juiste topscorer
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="topscorer-top3">In top 3 scorers</Label>
+                <Input
+                  id="topscorer-top3"
+                  type="number"
+                  min="0"
+                  value={topscorerTop3Points}
+                  onChange={(e) => setTopscorerTop3Points(e.target.value)}
+                  placeholder="3"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Punten als gekozen speler in top 3 eindigt
                 </p>
               </div>
             </div>
