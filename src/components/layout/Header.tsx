@@ -1,4 +1,4 @@
-import { Trophy, Menu, X, LogOut, User } from "lucide-react";
+import { Trophy, Menu, X, LogOut, User, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -34,6 +34,17 @@ const Header = () => {
             <a href="/matches" className="text-muted-foreground hover:text-foreground transition-colors">
               Wedstrijden
             </a>
+            {user && (
+              <>
+                <a href="/dashboard" className="text-muted-foreground hover:text-foreground transition-colors">
+                  Dashboard
+                </a>
+                <a href="/poule-management" className="text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5">
+                  <Settings className="w-4 h-4" />
+                  Poule Beheer
+                </a>
+              </>
+            )}
             <a href="#features" className="text-muted-foreground hover:text-foreground transition-colors">
               Features
             </a>
@@ -83,6 +94,17 @@ const Header = () => {
               <a href="/matches" className="text-muted-foreground hover:text-foreground transition-colors">
                 Wedstrijden
               </a>
+              {user && (
+                <>
+                  <a href="/dashboard" className="text-muted-foreground hover:text-foreground transition-colors">
+                    Dashboard
+                  </a>
+                  <a href="/poule-management" className="text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5">
+                    <Settings className="w-4 h-4" />
+                    Poule Beheer
+                  </a>
+                </>
+              )}
               <a href="#features" className="text-muted-foreground hover:text-foreground transition-colors">
                 Features
               </a>
