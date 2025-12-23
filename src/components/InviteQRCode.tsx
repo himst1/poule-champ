@@ -1,5 +1,5 @@
 import { QRCodeSVG } from "qrcode.react";
-import { Copy, Check, Download, QrCode } from "lucide-react";
+import { Copy, Check, Download, QrCode, Share2, MessageCircle, Mail, Facebook, Twitter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -25,6 +25,11 @@ const InviteQRCode = ({ inviteCode, pouleName, showButton = true }: InviteQRCode
   // Create the invite URL
   const baseUrl = window.location.origin;
   const inviteUrl = `${baseUrl}/dashboard?code=${inviteCode}`;
+
+  // Share message
+  const shareMessage = pouleName 
+    ? `Doe mee met mijn poule "${pouleName}"! Gebruik code: ${inviteCode} of klik op de link:`
+    : `Doe mee met mijn poule! Gebruik code: ${inviteCode} of klik op de link:`;
 
   const copyInviteCode = () => {
     navigator.clipboard.writeText(inviteCode);
@@ -81,6 +86,51 @@ const InviteQRCode = ({ inviteCode, pouleName, showButton = true }: InviteQRCode
     img.src = svgUrl;
   };
 
+  const shareViaWhatsApp = () => {
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(`${shareMessage} ${inviteUrl}`)}`;
+    window.open(whatsappUrl, "_blank");
+  };
+
+  const shareViaEmail = () => {
+    const subject = pouleName ? `Uitnodiging voor poule: ${pouleName}` : "Uitnodiging voor mijn poule";
+    const body = `${shareMessage}\n\n${inviteUrl}\n\nOf gebruik de code: ${inviteCode}`;
+    const mailtoUrl = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.location.href = mailtoUrl;
+  };
+
+  const shareViaFacebook = () => {
+    const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(inviteUrl)}&quote=${encodeURIComponent(shareMessage)}`;
+    window.open(facebookUrl, "_blank", "width=600,height=400");
+  };
+
+  const shareViaTwitter = () => {
+    const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareMessage)}&url=${encodeURIComponent(inviteUrl)}`;
+    window.open(twitterUrl, "_blank", "width=600,height=400");
+  };
+
+  const shareNative = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: pouleName ? `Uitnodiging: ${pouleName}` : "Poule Uitnodiging",
+          text: shareMessage,
+          url: inviteUrl,
+        });
+        toast({
+          title: "Gedeeld!",
+          description: "De uitnodiging is gedeeld",
+        });
+      } catch (error) {
+        // User cancelled or share failed
+        if ((error as Error).name !== "AbortError") {
+          copyInviteLink();
+        }
+      }
+    } else {
+      copyInviteLink();
+    }
+  };
+
   const QRContent = () => (
     <div className="flex flex-col items-center gap-4">
       {/* QR Code */}
@@ -90,7 +140,7 @@ const InviteQRCode = ({ inviteCode, pouleName, showButton = true }: InviteQRCode
       >
         <QRCodeSVG
           value={inviteUrl}
-          size={200}
+          size={180}
           level="H"
           includeMargin
           fgColor="#0a0f14"
@@ -112,6 +162,60 @@ const InviteQRCode = ({ inviteCode, pouleName, showButton = true }: InviteQRCode
               <Copy className="w-4 h-4" />
             )}
           </Button>
+        </div>
+      </div>
+
+      {/* Share Buttons */}
+      <div className="w-full space-y-3">
+        <p className="text-sm text-muted-foreground text-center">Deel via</p>
+        <div className="flex justify-center gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={shareViaWhatsApp}
+            className="h-11 w-11 rounded-full bg-[#25D366]/10 border-[#25D366]/30 hover:bg-[#25D366]/20 hover:border-[#25D366]/50"
+            title="Deel via WhatsApp"
+          >
+            <MessageCircle className="w-5 h-5 text-[#25D366]" />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={shareViaEmail}
+            className="h-11 w-11 rounded-full"
+            title="Deel via Email"
+          >
+            <Mail className="w-5 h-5" />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={shareViaFacebook}
+            className="h-11 w-11 rounded-full bg-[#1877F2]/10 border-[#1877F2]/30 hover:bg-[#1877F2]/20 hover:border-[#1877F2]/50"
+            title="Deel via Facebook"
+          >
+            <Facebook className="w-5 h-5 text-[#1877F2]" />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={shareViaTwitter}
+            className="h-11 w-11 rounded-full bg-[#1DA1F2]/10 border-[#1DA1F2]/30 hover:bg-[#1DA1F2]/20 hover:border-[#1DA1F2]/50"
+            title="Deel via X (Twitter)"
+          >
+            <Twitter className="w-5 h-5 text-[#1DA1F2]" />
+          </Button>
+          {typeof navigator !== "undefined" && navigator.share && (
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={shareNative}
+              className="h-11 w-11 rounded-full"
+              title="Meer opties"
+            >
+              <Share2 className="w-5 h-5" />
+            </Button>
+          )}
         </div>
       </div>
 
