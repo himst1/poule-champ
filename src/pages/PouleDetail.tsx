@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Trophy, Users, ArrowLeft, Share2, Copy, Check, Target, Loader2 } from "lucide-react";
+import { Trophy, Users, ArrowLeft, Share2, Copy, Check, Target, Loader2, Lock, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,7 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { format, parseISO, isBefore } from "date-fns";
+import { format, parseISO, isBefore, addMinutes, differenceInMinutes } from "date-fns";
 import { nl } from "date-fns/locale";
 
 type Poule = {
@@ -400,22 +400,41 @@ interface MatchPredictionCardProps {
 
 const MatchPredictionCard = ({ match, prediction, pouleId, userId, onSave }: MatchPredictionCardProps) => {
   const kickoffDate = parseISO(match.kickoff_time);
-  const canPredict = match.status === "pending" && isBefore(new Date(), kickoffDate);
+  const lockTime = addMinutes(kickoffDate, -5); // Lock 5 minutes before kickoff
   
-  const [isEditing, setIsEditing] = useState(false);
+  const [now, setNow] = useState(new Date());
   const [homeScore, setHomeScore] = useState(prediction?.predicted_home_score?.toString() || "");
   const [awayScore, setAwayScore] = useState(prediction?.predicted_away_score?.toString() || "");
   const [isSaving, setIsSaving] = useState(false);
   
   const { toast } = useToast();
 
+  // Update time every minute
+  useEffect(() => {
+    const interval = setInterval(() => setNow(new Date()), 60000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const isLocked = !isBefore(now, lockTime) || match.status !== "pending";
+  const canPredict = !isLocked && !!userId;
+  const minutesUntilLock = differenceInMinutes(lockTime, now);
+
   const savePrediction = async () => {
     if (!userId || homeScore === "" || awayScore === "") return;
+    
+    // Double-check lock time
+    if (!isBefore(new Date(), lockTime)) {
+      toast({
+        title: "Te laat!",
+        description: "De wedstrijd is vergrendeld voor voorspellingen.",
+        variant: "destructive",
+      });
+      return;
+    }
     
     setIsSaving(true);
     try {
       if (prediction) {
-        // Update existing
         const { error } = await supabase
           .from("predictions")
           .update({
@@ -426,7 +445,6 @@ const MatchPredictionCard = ({ match, prediction, pouleId, userId, onSave }: Mat
         
         if (error) throw error;
       } else {
-        // Insert new
         const { error } = await supabase
           .from("predictions")
           .insert({
@@ -446,7 +464,6 @@ const MatchPredictionCard = ({ match, prediction, pouleId, userId, onSave }: Mat
       });
       
       onSave();
-      setIsEditing(false);
     } catch (error: any) {
       toast({
         title: "Fout bij opslaan",
@@ -458,88 +475,138 @@ const MatchPredictionCard = ({ match, prediction, pouleId, userId, onSave }: Mat
     }
   };
 
-  return (
-    <Card className="glass-card rounded-2xl p-6">
-      <div className="flex items-center justify-between mb-4">
-        <span className="text-sm text-muted-foreground">{match.phase}</span>
-        <span className="text-sm text-muted-foreground">
-          {format(kickoffDate, "d MMM HH:mm", { locale: nl })}
-        </span>
-      </div>
-      
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <span className="text-3xl">{match.home_flag}</span>
-          <span className="font-display font-bold">{match.home_team}</span>
-        </div>
-        
-        {prediction && !isEditing ? (
-          <div className="px-4 py-2 rounded-lg bg-primary/20 border border-primary/30">
-            <span className="font-display font-bold text-primary">
-              {prediction.predicted_home_score} - {prediction.predicted_away_score}
-            </span>
-          </div>
-        ) : (
-          <span className="text-muted-foreground font-medium">VS</span>
-        )}
-        
-        <div className="flex items-center gap-3">
-          <span className="font-display font-bold">{match.away_team}</span>
-          <span className="text-3xl">{match.away_flag}</span>
-        </div>
-      </div>
+  // Auto-save when both scores are filled
+  useEffect(() => {
+    if (prediction) {
+      setHomeScore(prediction.predicted_home_score?.toString() || "");
+      setAwayScore(prediction.predicted_away_score?.toString() || "");
+    }
+  }, [prediction]);
 
-      {canPredict && userId && (
-        <div className="mt-4">
-          {isEditing ? (
-            <div className="flex items-center justify-center gap-3 mb-3">
-              <Input
-                type="number"
-                min="0"
-                max="99"
-                value={homeScore}
-                onChange={(e) => setHomeScore(e.target.value)}
-                className="w-16 text-center font-bold"
-                placeholder="0"
-              />
-              <span className="text-muted-foreground">-</span>
-              <Input
-                type="number"
-                min="0"
-                max="99"
-                value={awayScore}
-                onChange={(e) => setAwayScore(e.target.value)}
-                className="w-16 text-center font-bold"
-                placeholder="0"
-              />
+  return (
+    <Card className="glass-card rounded-2xl overflow-hidden">
+      {/* Header with phase and time */}
+      <div className="flex items-center justify-between px-5 py-3 bg-secondary/50 border-b border-border/50">
+        <span className="text-sm text-muted-foreground font-medium">{match.phase || "Groepsfase"}</span>
+        <div className="flex items-center gap-2">
+          {isLocked ? (
+            <div className="flex items-center gap-1.5 text-destructive">
+              <Lock className="w-3.5 h-3.5" />
+              <span className="text-xs font-medium">Vergrendeld</span>
+            </div>
+          ) : minutesUntilLock <= 60 ? (
+            <div className="flex items-center gap-1.5 text-accent">
+              <Clock className="w-3.5 h-3.5" />
+              <span className="text-xs font-medium">Nog {minutesUntilLock} min</span>
             </div>
           ) : null}
-          
-          {isEditing ? (
-            <div className="flex gap-2">
-              <Button variant="outline" className="flex-1" onClick={() => setIsEditing(false)}>
-                Annuleren
-              </Button>
-              <Button 
-                variant="hero" 
-                className="flex-1"
-                onClick={savePrediction}
-                disabled={isSaving || homeScore === "" || awayScore === ""}
-              >
-                {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : "Opslaan"}
-              </Button>
-            </div>
-          ) : prediction ? (
-            <Button variant="outline" className="w-full" onClick={() => setIsEditing(true)}>
-              Wijzig Voorspelling
-            </Button>
-          ) : (
-            <Button variant="hero" className="w-full" onClick={() => setIsEditing(true)}>
-              Voorspel Nu
-            </Button>
-          )}
+          <span className="text-sm text-muted-foreground">
+            {format(kickoffDate, "d MMM HH:mm", { locale: nl })}
+          </span>
         </div>
-      )}
+      </div>
+      
+      {/* Match Content */}
+      <div className="p-5">
+        <div className="grid grid-cols-[1fr_auto_1fr] gap-4 items-center">
+          {/* Home Team */}
+          <div className="flex items-center gap-3">
+            <div className="text-4xl flex-shrink-0">
+              {match.home_flag || "🏳️"}
+            </div>
+            <span className="font-display font-bold text-sm sm:text-base truncate">
+              {match.home_team}
+            </span>
+          </div>
+
+          {/* Score Input */}
+          <div className="flex items-center gap-2">
+            {canPredict ? (
+              <>
+                <Input
+                  type="number"
+                  min="0"
+                  max="20"
+                  value={homeScore}
+                  onChange={(e) => setHomeScore(e.target.value)}
+                  className="w-14 h-12 text-center font-display font-bold text-xl bg-secondary border-border focus:border-primary"
+                  placeholder="-"
+                  disabled={isSaving}
+                />
+                <span className="text-muted-foreground font-bold text-xl">:</span>
+                <Input
+                  type="number"
+                  min="0"
+                  max="20"
+                  value={awayScore}
+                  onChange={(e) => setAwayScore(e.target.value)}
+                  className="w-14 h-12 text-center font-display font-bold text-xl bg-secondary border-border focus:border-primary"
+                  placeholder="-"
+                  disabled={isSaving}
+                />
+              </>
+            ) : prediction ? (
+              <div className="px-4 py-2 rounded-lg bg-primary/20 border border-primary/30">
+                <span className="font-display font-bold text-xl text-primary">
+                  {prediction.predicted_home_score} : {prediction.predicted_away_score}
+                </span>
+              </div>
+            ) : (
+              <div className="px-4 py-2 rounded-lg bg-destructive/10 border border-destructive/30">
+                <span className="font-display font-bold text-sm text-destructive">
+                  Niet ingevuld
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Away Team */}
+          <div className="flex items-center justify-end gap-3">
+            <span className="font-display font-bold text-sm sm:text-base truncate text-right">
+              {match.away_team}
+            </span>
+            <div className="text-4xl flex-shrink-0">
+              {match.away_flag || "🏳️"}
+            </div>
+          </div>
+        </div>
+
+        {/* Save Button */}
+        {canPredict && (
+          <div className="mt-4">
+            <Button 
+              variant="default" 
+              className="w-full"
+              onClick={savePrediction}
+              disabled={isSaving || homeScore === "" || awayScore === ""}
+            >
+              {isSaving ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              ) : prediction ? (
+                <Check className="w-4 h-4 mr-2" />
+              ) : null}
+              {isSaving ? "Opslaan..." : prediction ? "Wijziging Opslaan" : "Voorspelling Opslaan"}
+            </Button>
+          </div>
+        )}
+
+        {/* Locked Message */}
+        {isLocked && !prediction && userId && (
+          <div className="mt-4 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-center">
+            <p className="text-sm text-destructive font-medium">
+              Je hebt geen voorspelling gedaan voor deze wedstrijd
+            </p>
+          </div>
+        )}
+
+        {/* Points Earned (for finished matches) */}
+        {prediction?.points_earned !== null && prediction?.points_earned !== undefined && match.status === "finished" && (
+          <div className="mt-4 p-3 rounded-lg bg-primary/10 border border-primary/20 text-center">
+            <p className="text-sm text-muted-foreground">Punten verdiend</p>
+            <p className="font-display font-bold text-2xl text-primary">+{prediction.points_earned}</p>
+          </div>
+        )}
+      </div>
     </Card>
   );
 };
