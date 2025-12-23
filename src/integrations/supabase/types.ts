@@ -445,6 +445,45 @@ export type Database = {
         }
         Relationships: []
       }
+      wk_players: {
+        Row: {
+          age: number
+          country: string
+          country_flag: string | null
+          created_at: string
+          goals: number
+          id: string
+          international_caps: number
+          name: string
+          position: string
+          updated_at: string
+        }
+        Insert: {
+          age: number
+          country: string
+          country_flag?: string | null
+          created_at?: string
+          goals?: number
+          id?: string
+          international_caps?: number
+          name: string
+          position: string
+          updated_at?: string
+        }
+        Update: {
+          age?: number
+          country?: string
+          country_flag?: string | null
+          created_at?: string
+          goals?: number
+          id?: string
+          international_caps?: number
+          name?: string
+          position?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
