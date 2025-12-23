@@ -14,16 +14,303 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      matches: {
+        Row: {
+          away_flag: string | null
+          away_score: number | null
+          away_team: string
+          created_at: string
+          external_id: number | null
+          home_flag: string | null
+          home_score: number | null
+          home_team: string
+          id: string
+          kickoff_time: string
+          phase: string | null
+          status: Database["public"]["Enums"]["match_status"]
+          updated_at: string
+        }
+        Insert: {
+          away_flag?: string | null
+          away_score?: number | null
+          away_team: string
+          created_at?: string
+          external_id?: number | null
+          home_flag?: string | null
+          home_score?: number | null
+          home_team: string
+          id?: string
+          kickoff_time: string
+          phase?: string | null
+          status?: Database["public"]["Enums"]["match_status"]
+          updated_at?: string
+        }
+        Update: {
+          away_flag?: string | null
+          away_score?: number | null
+          away_team?: string
+          created_at?: string
+          external_id?: number | null
+          home_flag?: string | null
+          home_score?: number | null
+          home_team?: string
+          id?: string
+          kickoff_time?: string
+          phase?: string | null
+          status?: Database["public"]["Enums"]["match_status"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      payments: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          poule_id: string
+          status: Database["public"]["Enums"]["payment_status"]
+          stripe_payment_intent_id: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          poule_id: string
+          status?: Database["public"]["Enums"]["payment_status"]
+          stripe_payment_intent_id?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          poule_id?: string
+          status?: Database["public"]["Enums"]["payment_status"]
+          stripe_payment_intent_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_poule_id_fkey"
+            columns: ["poule_id"]
+            isOneToOne: false
+            referencedRelation: "poules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      poule_members: {
+        Row: {
+          id: string
+          joined_at: string
+          payment_status: Database["public"]["Enums"]["payment_status"]
+          points: number
+          poule_id: string
+          rank: number | null
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          joined_at?: string
+          payment_status?: Database["public"]["Enums"]["payment_status"]
+          points?: number
+          poule_id: string
+          rank?: number | null
+          user_id: string
+        }
+        Update: {
+          id?: string
+          joined_at?: string
+          payment_status?: Database["public"]["Enums"]["payment_status"]
+          points?: number
+          poule_id?: string
+          rank?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "poule_members_poule_id_fkey"
+            columns: ["poule_id"]
+            isOneToOne: false
+            referencedRelation: "poules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "poule_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      poules: {
+        Row: {
+          created_at: string
+          creator_id: string
+          deadline: string | null
+          description: string | null
+          entry_fee: number
+          id: string
+          invite_code: string | null
+          max_members: number | null
+          name: string
+          prize_distribution: Json | null
+          scoring_rules: Json | null
+          status: Database["public"]["Enums"]["poule_status"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          creator_id: string
+          deadline?: string | null
+          description?: string | null
+          entry_fee?: number
+          id?: string
+          invite_code?: string | null
+          max_members?: number | null
+          name: string
+          prize_distribution?: Json | null
+          scoring_rules?: Json | null
+          status?: Database["public"]["Enums"]["poule_status"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          creator_id?: string
+          deadline?: string | null
+          description?: string | null
+          entry_fee?: number
+          id?: string
+          invite_code?: string | null
+          max_members?: number | null
+          name?: string
+          prize_distribution?: Json | null
+          scoring_rules?: Json | null
+          status?: Database["public"]["Enums"]["poule_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "poules_creator_id_fkey"
+            columns: ["creator_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      predictions: {
+        Row: {
+          created_at: string
+          id: string
+          match_id: string
+          points_earned: number | null
+          poule_id: string
+          predicted_away_score: number
+          predicted_home_score: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          match_id: string
+          points_earned?: number | null
+          poule_id: string
+          predicted_away_score: number
+          predicted_home_score: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          match_id?: string
+          points_earned?: number | null
+          poule_id?: string
+          predicted_away_score?: number
+          predicted_home_score?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "predictions_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "predictions_poule_id_fkey"
+            columns: ["poule_id"]
+            isOneToOne: false
+            referencedRelation: "poules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "predictions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          display_name: string | null
+          email: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_poule_creator: {
+        Args: { _poule_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_poule_member: {
+        Args: { _poule_id: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      match_status: "pending" | "live" | "finished"
+      payment_status: "pending" | "succeeded" | "failed" | "refunded"
+      poule_status: "open" | "closed" | "finished"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +437,10 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      match_status: ["pending", "live", "finished"],
+      payment_status: ["pending", "succeeded", "failed", "refunded"],
+      poule_status: ["open", "closed", "finished"],
+    },
   },
 } as const
