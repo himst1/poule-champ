@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Trophy, Users, ArrowLeft, Share2, Copy, Check, Target, Loader2, Lock, Clock, Brain, Star, StarOff, Calendar, X, Save, Settings, Goal, Eye } from "lucide-react";
+import { Trophy, Users, ArrowLeft, Share2, Copy, Check, Target, Loader2, Lock, Clock, Brain, Star, StarOff, Calendar, X, Save, Settings, Goal, Eye, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
@@ -446,6 +446,38 @@ const PouleDetail = () => {
     enabled: !!user && !!id,
   });
 
+  // Check if user has topscorer prediction
+  const { data: hasTopscorerPrediction } = useQuery({
+    queryKey: ["has-topscorer-prediction", id, user?.id],
+    queryFn: async () => {
+      if (!user) return false;
+      const { data } = await supabase
+        .from("topscorer_predictions")
+        .select("id")
+        .eq("poule_id", id!)
+        .eq("user_id", user.id)
+        .maybeSingle();
+      return !!data;
+    },
+    enabled: !!user && !!id,
+  });
+
+  // Check if user has winner prediction
+  const { data: hasWinnerPrediction } = useQuery({
+    queryKey: ["has-winner-prediction", id, user?.id],
+    queryFn: async () => {
+      if (!user) return false;
+      const { data } = await supabase
+        .from("winner_predictions")
+        .select("id")
+        .eq("poule_id", id!)
+        .eq("user_id", user.id)
+        .maybeSingle();
+      return !!data;
+    },
+    enabled: !!user && !!id,
+  });
+
   const predictionMap: Record<string, Prediction> = {};
   predictions?.forEach(p => {
     predictionMap[p.match_id] = p;
@@ -688,11 +720,11 @@ const PouleDetail = () => {
           {/* Tabs */}
           <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
             {[
-              { id: "ranking", label: "Ranking", icon: Trophy },
-              { id: "matches", label: "Wedstrijden", icon: Target },
-              { id: "predictions", label: "Mijn Voorspellingen", icon: Users },
-              { id: "topscorer", label: "Topscorer", icon: Goal },
-              { id: "winner", label: "WK Winnaar", icon: Trophy },
+              { id: "ranking", label: "Ranking", icon: Trophy, hasPrediction: undefined },
+              { id: "matches", label: "Wedstrijden", icon: Target, hasPrediction: undefined },
+              { id: "predictions", label: "Mijn Voorspellingen", icon: Users, hasPrediction: undefined },
+              { id: "topscorer", label: "Topscorer", icon: Goal, hasPrediction: hasTopscorerPrediction },
+              { id: "winner", label: "WK Winnaar", icon: Trophy, hasPrediction: hasWinnerPrediction },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -705,6 +737,13 @@ const PouleDetail = () => {
               >
                 <tab.icon className="w-4 h-4" />
                 {tab.label}
+                {tab.hasPrediction !== undefined && user && (
+                  tab.hasPrediction ? (
+                    <Check className="w-3.5 h-3.5 text-green-500" />
+                  ) : (
+                    <span className="w-2 h-2 bg-destructive rounded-full animate-pulse" />
+                  )
+                )}
               </button>
             ))}
           </div>
@@ -712,6 +751,38 @@ const PouleDetail = () => {
           {/* Tab Content */}
           {activeTab === "ranking" && (
             <div className="space-y-6">
+              {/* Missing Predictions Warning */}
+              {user && (!hasTopscorerPrediction || !hasWinnerPrediction) && (
+                <Card className="border-amber-500/50 bg-amber-500/10">
+                  <CardContent className="py-4">
+                    <div className="flex items-start gap-3">
+                      <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                      <div className="flex-1">
+                        <p className="font-medium text-amber-600 dark:text-amber-400">
+                          Vergeet niet je toernooivoorspellingen in te vullen!
+                        </p>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Je kunt punten verdienen door de topscorer en WK winnaar correct te voorspellen.
+                        </p>
+                        <div className="flex flex-wrap gap-2 mt-3">
+                          {!hasTopscorerPrediction && (
+                            <Button size="sm" variant="outline" onClick={() => setActiveTab("topscorer")} className="gap-1.5">
+                              <Goal className="w-4 h-4" />
+                              Topscorer kiezen
+                            </Button>
+                          )}
+                          {!hasWinnerPrediction && (
+                            <Button size="sm" variant="outline" onClick={() => setActiveTab("winner")} className="gap-1.5">
+                              <Trophy className="w-4 h-4" />
+                              WK Winnaar kiezen
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
               <div className="glass-card rounded-2xl overflow-hidden">
                 <div className="p-4 border-b border-border">
                   <h2 className="font-display font-bold text-lg">Live Ranglijst</h2>
