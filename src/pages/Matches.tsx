@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -8,10 +8,71 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Calendar, Filter, Trophy, Clock, Check, X, LogIn, Loader2 } from "lucide-react";
-import { format, parseISO, isBefore } from "date-fns";
+import { format, parseISO, isBefore, differenceInSeconds } from "date-fns";
 import { nl } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+
+// Countdown hook for upcoming matches
+const useCountdown = (targetDate: Date) => {
+  const [timeLeft, setTimeLeft] = useState(() => {
+    const diff = differenceInSeconds(targetDate, new Date());
+    return diff > 0 ? diff : 0;
+  });
+
+  useEffect(() => {
+    if (timeLeft <= 0) return;
+
+    const interval = setInterval(() => {
+      const diff = differenceInSeconds(targetDate, new Date());
+      setTimeLeft(diff > 0 ? diff : 0);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [targetDate, timeLeft]);
+
+  const days = Math.floor(timeLeft / 86400);
+  const hours = Math.floor((timeLeft % 86400) / 3600);
+  const minutes = Math.floor((timeLeft % 3600) / 60);
+  const seconds = timeLeft % 60;
+
+  return { days, hours, minutes, seconds, totalSeconds: timeLeft };
+};
+
+// Countdown display component
+const CountdownTimer = ({ kickoffDate }: { kickoffDate: Date }) => {
+  const { days, hours, minutes, seconds, totalSeconds } = useCountdown(kickoffDate);
+
+  if (totalSeconds <= 0) return null;
+
+  // Show countdown only for matches within 24 hours
+  if (days > 0) {
+    return (
+      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+        <Clock className="w-3 h-3" />
+        <span>{days}d {hours}u</span>
+      </div>
+    );
+  }
+
+  // Within 1 hour - show urgent countdown
+  if (hours === 0 && minutes < 60) {
+    return (
+      <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-destructive/10 text-destructive text-xs font-medium animate-pulse">
+        <Clock className="w-3 h-3" />
+        <span>{minutes}:{seconds.toString().padStart(2, '0')}</span>
+      </div>
+    );
+  }
+
+  // Within 24 hours
+  return (
+    <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-accent/10 text-accent text-xs font-medium">
+      <Clock className="w-3 h-3" />
+      <span>{hours}u {minutes}m</span>
+    </div>
+  );
+};
 
 type Match = {
   id: string;
@@ -426,11 +487,12 @@ const MatchRow = ({ match, prediction, isLoggedIn, userId }: MatchRowProps) => {
     <div className={`flex items-center gap-2 md:gap-4 p-3 rounded-lg transition-all ${
       prediction ? "bg-primary/5 border border-primary/20" : "bg-card border border-border/50 hover:border-border"
     }`}>
-      {/* Time */}
-      <div className="w-12 shrink-0 text-center">
+      {/* Time / Countdown */}
+      <div className="w-20 shrink-0 flex flex-col items-center gap-0.5">
         <span className="text-xs text-muted-foreground font-medium">
           {format(kickoffDate, "HH:mm")}
         </span>
+        {canPredict && <CountdownTimer kickoffDate={kickoffDate} />}
       </div>
 
       {/* Phase Badge */}
