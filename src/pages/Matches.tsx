@@ -7,7 +7,7 @@ import Footer from "@/components/layout/Footer";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Calendar, Filter, Trophy, Clock, Check, X, LogIn, Loader2, Bell, BellOff, Star, StarOff } from "lucide-react";
+import { Calendar, Filter, Trophy, Clock, Check, X, LogIn, Loader2, Bell, BellOff, Star, StarOff, Brain } from "lucide-react";
 import { format, parseISO, isBefore, differenceInSeconds, differenceInMinutes } from "date-fns";
 import { nl } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
@@ -15,6 +15,8 @@ import { useNavigate } from "react-router-dom";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { AIPredictionModal } from "@/components/AIPredictionModal";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 // Countdown hook for upcoming matches
 const useCountdown = (targetDate: Date) => {
@@ -711,9 +713,15 @@ const MatchRow = ({ match, prediction, isLoggedIn, userId }: MatchRowProps) => {
   const [homeScore, setHomeScore] = useState(prediction?.predicted_home_score?.toString() || "");
   const [awayScore, setAwayScore] = useState(prediction?.predicted_away_score?.toString() || "");
   const [isSaving, setIsSaving] = useState(false);
+  const [showAIPrediction, setShowAIPrediction] = useState(false);
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  const handleApplyAIPrediction = (aiHomeScore: number, aiAwayScore: number) => {
+    setHomeScore(aiHomeScore.toString());
+    setAwayScore(aiAwayScore.toString());
+  };
 
   const savePrediction = async () => {
     if (!userId || homeScore === "" || awayScore === "") return;
@@ -831,6 +839,29 @@ const MatchRow = ({ match, prediction, isLoggedIn, userId }: MatchRowProps) => {
         <span className="text-sm font-medium truncate">{match.away_team}</span>
       </div>
 
+      {/* AI Prediction Button */}
+      <div className="w-8 shrink-0 flex justify-center">
+        {canPredict && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 w-7 p-0"
+                  onClick={() => setShowAIPrediction(true)}
+                >
+                  <Brain className="w-4 h-4 text-primary" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>AI voorspelling</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
+      </div>
+
       {/* Save Button / Points */}
       <div className="w-16 shrink-0 flex justify-end">
         {isLoggedIn && canPredict && hasChanged ? (
@@ -851,6 +882,17 @@ const MatchRow = ({ match, prediction, isLoggedIn, userId }: MatchRowProps) => {
           <Check className="w-4 h-4 text-primary" />
         ) : null}
       </div>
+
+      {/* AI Prediction Modal */}
+      <AIPredictionModal
+        isOpen={showAIPrediction}
+        onClose={() => setShowAIPrediction(false)}
+        homeTeam={match.home_team}
+        awayTeam={match.away_team}
+        phase={match.phase}
+        kickoffTime={match.kickoff_time}
+        onApplyPrediction={isLoggedIn ? handleApplyAIPrediction : undefined}
+      />
     </div>
   );
 };
