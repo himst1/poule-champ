@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Trophy, Crown, Medal, TrendingUp, TrendingDown, Minus, Sparkles, Flame } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import confetti from "canvas-confetti";
 
 interface LeaderboardEntry {
   id: string;
@@ -19,11 +20,81 @@ interface LiveLeaderboardProps {
   className?: string;
 }
 
+// Confetti celebration function
+const triggerConfetti = () => {
+  const duration = 3000;
+  const animationEnd = Date.now() + duration;
+  const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 9999 };
+
+  const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min;
+
+  const interval = setInterval(() => {
+    const timeLeft = animationEnd - Date.now();
+
+    if (timeLeft <= 0) {
+      clearInterval(interval);
+      return;
+    }
+
+    const particleCount = 50 * (timeLeft / duration);
+
+    // Confetti from both sides
+    confetti({
+      ...defaults,
+      particleCount,
+      origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 },
+      colors: ['#FFD700', '#FFA500', '#FF6B00', '#FFFFFF', '#FFE4B5'],
+    });
+    confetti({
+      ...defaults,
+      particleCount,
+      origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 },
+      colors: ['#FFD700', '#FFA500', '#FF6B00', '#FFFFFF', '#FFE4B5'],
+    });
+  }, 250);
+
+  // Big burst in the center
+  confetti({
+    particleCount: 100,
+    spread: 70,
+    origin: { x: 0.5, y: 0.5 },
+    colors: ['#FFD700', '#FFA500', '#FF6B00'],
+    zIndex: 9999,
+  });
+};
+
 const LiveLeaderboard = ({ pouleId, currentUserId, className }: LiveLeaderboardProps) => {
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [animatingIds, setAnimatingIds] = useState<Set<string>>(new Set());
   const [previousEntries, setPreviousEntries] = useState<Map<string, LeaderboardEntry>>(new Map());
+  const [showCelebration, setShowCelebration] = useState(false);
+
+  // Check if current user became first place
+  const checkForFirstPlaceCelebration = useCallback((
+    newEntries: LeaderboardEntry[],
+    prevEntriesMap: Map<string, LeaderboardEntry>
+  ) => {
+    if (!currentUserId) return;
+
+    const currentUserEntry = newEntries.find(e => e.user_id === currentUserId);
+    const previousUserEntry = prevEntriesMap.get(currentUserId);
+
+    // User is now rank 1 but wasn't before
+    if (
+      currentUserEntry?.rank === 1 && 
+      previousUserEntry && 
+      previousUserEntry.rank !== 1 &&
+      previousUserEntry.rank !== null
+    ) {
+      console.log("🎉 User reached first place! Triggering celebration!");
+      setShowCelebration(true);
+      triggerConfetti();
+      
+      // Hide celebration overlay after animation
+      setTimeout(() => setShowCelebration(false), 3000);
+    }
+  }, [currentUserId]);
 
   // Fetch initial data
   useEffect(() => {
@@ -105,6 +176,9 @@ const LiveLeaderboard = ({ pouleId, currentUserId, className }: LiveLeaderboardP
               previousRank: previousEntries.get(entry.user_id)?.rank,
             }));
 
+            // Check for first place celebration before updating state
+            checkForFirstPlaceCelebration(mapped, previousEntries);
+
             // Find entries that changed
             const changedIds = new Set<string>();
             mapped.forEach((entry) => {
@@ -128,7 +202,7 @@ const LiveLeaderboard = ({ pouleId, currentUserId, className }: LiveLeaderboardP
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [pouleId, previousEntries]);
+  }, [pouleId, previousEntries, checkForFirstPlaceCelebration]);
 
   const getRankChange = (current: number | null, previous: number | null | undefined) => {
     if (current === null || previous === null || previous === undefined) return "same";
@@ -195,6 +269,19 @@ const LiveLeaderboard = ({ pouleId, currentUserId, className }: LiveLeaderboardP
 
   return (
     <div className={cn("glass-card rounded-2xl p-6 overflow-hidden relative", className)}>
+      {/* Celebration overlay when user reaches first place */}
+      {showCelebration && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-yellow-500/20 via-amber-500/10 to-orange-500/20 backdrop-blur-sm animate-fade-in">
+          <div className="text-center animate-scale-in">
+            <Crown className="w-16 h-16 mx-auto text-yellow-400 animate-bounce mb-4" />
+            <h3 className="font-display text-2xl font-bold text-yellow-400 mb-2">
+              🎉 Gefeliciteerd! 🎉
+            </h3>
+            <p className="text-foreground/80">Je staat nu op de eerste plaats!</p>
+          </div>
+        </div>
+      )}
+
       {/* Animated background gradient */}
       <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 pointer-events-none" />
       
