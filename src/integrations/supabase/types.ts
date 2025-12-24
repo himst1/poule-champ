@@ -265,6 +265,45 @@ export type Database = {
         }
         Relationships: []
       }
+      poule_chat_messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          poule_id: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          poule_id: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          poule_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "poule_chat_messages_poule_id_fkey"
+            columns: ["poule_id"]
+            isOneToOne: false
+            referencedRelation: "poules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "poule_chat_messages_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       poule_members: {
         Row: {
           id: string
