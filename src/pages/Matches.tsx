@@ -1139,21 +1139,25 @@ const MatchRow = ({ match, prediction, isLoggedIn, userId, pouleId, bulkPredicti
           <div className="flex items-center gap-1">
             <Input
               type="number"
+              inputMode="numeric"
+              pattern="[0-9]*"
               min="0"
               max="99"
               value={homeScore}
               onChange={(e) => setHomeScore(e.target.value)}
-              className="w-10 h-8 text-center text-sm font-bold p-0"
+              className="w-12 h-10 text-center text-sm font-bold p-0 touch-manipulation"
               placeholder="-"
             />
             <span className="text-muted-foreground text-xs">-</span>
             <Input
               type="number"
+              inputMode="numeric"
+              pattern="[0-9]*"
               min="0"
               max="99"
               value={awayScore}
               onChange={(e) => setAwayScore(e.target.value)}
-              className="w-10 h-8 text-center text-sm font-bold p-0"
+              className="w-12 h-10 text-center text-sm font-bold p-0 touch-manipulation"
               placeholder="-"
             />
           </div>
