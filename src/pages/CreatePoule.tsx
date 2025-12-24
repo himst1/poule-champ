@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Trophy, Users, CreditCard, ChevronRight, Loader2, Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Header from "@/components/layout/Header";
@@ -11,8 +11,10 @@ import InviteQRCode from "@/components/InviteQRCode";
 
 const CreatePoule = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const { toast } = useToast();
+  const isNewUser = searchParams.get("welcome") === "true";
   const [step, setStep] = useState(1);
   const [isCreating, setIsCreating] = useState(false);
   const [createdPoule, setCreatedPoule] = useState<{ id: string; invite_code: string } | null>(null);
@@ -154,6 +156,16 @@ const CreatePoule = () => {
           <div className="glass-card rounded-2xl p-6 sm:p-8">
             {step === 1 && (
               <div className="space-y-6">
+                {isNewUser && (
+                  <div className="bg-primary/10 border border-primary/20 rounded-xl p-4 text-center mb-6">
+                    <p className="text-primary font-medium">
+                      🎉 Welkom bij PouleMeister! Je account is aangemaakt.
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Maak nu je eerste poule aan en nodig je vrienden uit.
+                    </p>
+                  </div>
+                )}
                 <div className="text-center mb-8">
                   <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
                     <Trophy className="w-8 h-8 text-primary" />
