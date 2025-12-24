@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      actual_group_standings: {
+        Row: {
+          created_at: string
+          group_name: string
+          id: string
+          standings: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          group_name: string
+          id?: string
+          standings: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          group_name?: string
+          id?: string
+          standings?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       global_settings: {
         Row: {
           created_at: string
@@ -38,6 +62,65 @@ export type Database = {
         }
         Relationships: []
       }
+      group_standings_predictions: {
+        Row: {
+          created_at: string
+          group_name: string
+          id: string
+          points_earned: number
+          poule_id: string
+          predicted_standings: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          group_name: string
+          id?: string
+          points_earned?: number
+          poule_id: string
+          predicted_standings: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          group_name?: string
+          id?: string
+          points_earned?: number
+          poule_id?: string
+          predicted_standings?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_standings_predictions_poule_id_fkey"
+            columns: ["poule_id"]
+            isOneToOne: false
+            referencedRelation: "poules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      groups: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
       matches: {
         Row: {
           away_flag: string | null
@@ -49,7 +132,9 @@ export type Database = {
           home_score: number | null
           home_team: string
           id: string
+          is_knockout: boolean
           kickoff_time: string
+          penalty_winner: string | null
           phase: string | null
           status: Database["public"]["Enums"]["match_status"]
           updated_at: string
@@ -64,7 +149,9 @@ export type Database = {
           home_score?: number | null
           home_team: string
           id?: string
+          is_knockout?: boolean
           kickoff_time: string
+          penalty_winner?: string | null
           phase?: string | null
           status?: Database["public"]["Enums"]["match_status"]
           updated_at?: string
@@ -79,7 +166,9 @@ export type Database = {
           home_score?: number | null
           home_team?: string
           id?: string
+          is_knockout?: boolean
           kickoff_time?: string
+          penalty_winner?: string | null
           phase?: string | null
           status?: Database["public"]["Enums"]["match_status"]
           updated_at?: string
@@ -290,6 +379,7 @@ export type Database = {
           poule_id: string
           predicted_away_score: number
           predicted_home_score: number
+          predicted_penalty_winner: string | null
           updated_at: string
           user_id: string
         }
@@ -302,6 +392,7 @@ export type Database = {
           poule_id: string
           predicted_away_score: number
           predicted_home_score: number
+          predicted_penalty_winner?: string | null
           updated_at?: string
           user_id: string
         }
@@ -314,6 +405,7 @@ export type Database = {
           poule_id?: string
           predicted_away_score?: number
           predicted_home_score?: number
+          predicted_penalty_winner?: string | null
           updated_at?: string
           user_id?: string
         }

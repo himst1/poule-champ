@@ -8,12 +8,14 @@ const corsHeaders = {
 // Default scoring rules (can be overridden per poule)
 const DEFAULT_EXACT_SCORE_POINTS = 5
 const DEFAULT_CORRECT_RESULT_POINTS = 2
+const DEFAULT_PENALTY_CORRECT_POINTS = 3
 
 type MatchResult = 'home' | 'away' | 'draw'
 
 interface ScoringRules {
   correct_score: number
   correct_result: number
+  penalty_correct?: number
 }
 
 function getMatchResult(homeScore: number, awayScore: number): MatchResult {
@@ -27,22 +29,34 @@ function calculatePoints(
   predictedAway: number,
   actualHome: number,
   actualAway: number,
-  scoringRules: ScoringRules
+  scoringRules: ScoringRules,
+  isKnockout: boolean = false,
+  predictedPenaltyWinner: string | null = null,
+  actualPenaltyWinner: string | null = null
 ): number {
+  let points = 0
+  
   // Exact score match
   if (predictedHome === actualHome && predictedAway === actualAway) {
-    return scoringRules.correct_score
+    points = scoringRules.correct_score
+  } else {
+    // Correct result (winner or draw)
+    const predictedResult = getMatchResult(predictedHome, predictedAway)
+    const actualResult = getMatchResult(actualHome, actualAway)
+    
+    if (predictedResult === actualResult) {
+      points = scoringRules.correct_result
+    }
   }
   
-  // Correct result (winner or draw)
-  const predictedResult = getMatchResult(predictedHome, predictedAway)
-  const actualResult = getMatchResult(actualHome, actualAway)
-  
-  if (predictedResult === actualResult) {
-    return scoringRules.correct_result
+  // Bonus points for correct penalty prediction in knockout matches
+  if (isKnockout && actualPenaltyWinner && predictedPenaltyWinner) {
+    if (predictedPenaltyWinner === actualPenaltyWinner) {
+      points += scoringRules.penalty_correct ?? DEFAULT_PENALTY_CORRECT_POINTS
+    }
   }
   
-  return 0
+  return points
 }
 
 Deno.serve(async (req) => {
@@ -63,7 +77,7 @@ Deno.serve(async (req) => {
     // Get all finished matches that have scores
     const { data: finishedMatches, error: matchError } = await supabase
       .from('matches')
-      .select('id, home_score, away_score, kickoff_time')
+      .select('id, home_score, away_score, kickoff_time, is_knockout, penalty_winner')
       .eq('status', 'finished')
       .not('home_score', 'is', null)
       .not('away_score', 'is', null)
@@ -101,13 +115,14 @@ Deno.serve(async (req) => {
       pouleScoringRules[poule.id] = {
         correct_score: rules?.correct_score ?? DEFAULT_EXACT_SCORE_POINTS,
         correct_result: rules?.correct_result ?? DEFAULT_CORRECT_RESULT_POINTS,
+        penalty_correct: rules?.penalty_correct ?? DEFAULT_PENALTY_CORRECT_POINTS,
       }
     })
 
     // Get all predictions for finished matches
     const { data: predictions, error: predError } = await supabase
       .from('predictions')
-      .select('id, match_id, predicted_home_score, predicted_away_score, poule_id, user_id, points_earned')
+      .select('id, match_id, predicted_home_score, predicted_away_score, predicted_penalty_winner, poule_id, user_id, points_earned')
       .in('match_id', matchIds)
 
     if (predError) {
@@ -125,12 +140,20 @@ Deno.serve(async (req) => {
     }
 
     // Create a map of match scores
-    const matchScores: Record<string, { home: number; away: number; kickoff_time: string }> = {}
+    const matchScores: Record<string, { 
+      home: number; 
+      away: number; 
+      kickoff_time: string;
+      is_knockout: boolean;
+      penalty_winner: string | null;
+    }> = {}
     finishedMatches.forEach(match => {
       matchScores[match.id] = {
         home: match.home_score!,
         away: match.away_score!,
         kickoff_time: match.kickoff_time,
+        is_knockout: match.is_knockout || false,
+        penalty_winner: match.penalty_winner || null,
       }
     })
 
@@ -151,6 +174,7 @@ Deno.serve(async (req) => {
       const scoringRules = pouleScoringRules[prediction.poule_id] || {
         correct_score: DEFAULT_EXACT_SCORE_POINTS,
         correct_result: DEFAULT_CORRECT_RESULT_POINTS,
+        penalty_correct: DEFAULT_PENALTY_CORRECT_POINTS,
       }
 
       const points = calculatePoints(
@@ -158,7 +182,10 @@ Deno.serve(async (req) => {
         prediction.predicted_away_score,
         matchScore.home,
         matchScore.away,
-        scoringRules
+        scoringRules,
+        matchScore.is_knockout,
+        prediction.predicted_penalty_winner,
+        matchScore.penalty_winner
       )
 
       // Only update if points haven't been calculated yet or changed
