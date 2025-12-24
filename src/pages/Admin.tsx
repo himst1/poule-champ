@@ -5,11 +5,12 @@ import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Shield, Users, Trophy, Settings, Loader2, ArrowLeft } from "lucide-react";
+import { Shield, Users, Trophy, Settings, Loader2, ArrowLeft, Medal } from "lucide-react";
 import AdminPouleApproval from "@/components/admin/AdminPouleApproval";
 import AdminMatchesTab from "@/components/admin/AdminMatchesTab";
 import AdminWKPlayers from "@/components/admin/AdminWKPlayers";
 import AdminGlobalSettings from "@/components/admin/AdminGlobalSettings";
+import AdminWKResults from "@/components/admin/AdminWKResults";
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -78,7 +79,7 @@ const Admin = () => {
         </div>
 
         <Tabs defaultValue="poules" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-grid">
+          <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-grid">
             <TabsTrigger value="poules" className="gap-2">
               <Users className="w-4 h-4" />
               <span className="hidden sm:inline">Poules</span>
@@ -86,6 +87,10 @@ const Admin = () => {
             <TabsTrigger value="matches" className="gap-2">
               <Trophy className="w-4 h-4" />
               <span className="hidden sm:inline">Wedstrijden</span>
+            </TabsTrigger>
+            <TabsTrigger value="results" className="gap-2">
+              <Medal className="w-4 h-4" />
+              <span className="hidden sm:inline">WK Resultaten</span>
             </TabsTrigger>
             <TabsTrigger value="players" className="gap-2">
               <Users className="w-4 h-4" />
@@ -102,6 +107,9 @@ const Admin = () => {
           </TabsContent>
           <TabsContent value="matches">
             <AdminMatchesTab />
+          </TabsContent>
+          <TabsContent value="results">
+            <AdminWKResults />
           </TabsContent>
           <TabsContent value="players">
             <AdminWKPlayers />
