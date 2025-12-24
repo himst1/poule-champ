@@ -21,7 +21,8 @@ import {
   ChevronUp,
   Flag,
   Check,
-  X
+  X,
+  MessageCircle
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { nl } from "date-fns/locale";
@@ -30,6 +31,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { PredictionComments } from "@/components/PredictionComments";
 
 // Types
 interface Profile {
@@ -95,6 +97,12 @@ const PredictionsOverview = () => {
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
+  const [commentModal, setCommentModal] = useState<{
+    isOpen: boolean;
+    predictionId: string;
+    predictorName: string;
+    matchInfo: string;
+  } | null>(null);
 
   // Fetch poule details
   const { data: poule } = useQuery({
@@ -496,6 +504,23 @@ const PredictionsOverview = () => {
                                       </div>
                                       
                                       <div className="flex items-center gap-2">
+                                        {/* Comment Button */}
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setCommentModal({
+                                              isOpen: true,
+                                              predictionId: pred.id,
+                                              predictorName: member.profiles?.display_name || "Onbekend",
+                                              matchInfo: `${match.home_team} vs ${match.away_team}`,
+                                            });
+                                          }}
+                                          className="p-1.5 rounded-md hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground"
+                                          title="Reacties"
+                                        >
+                                          <MessageCircle className="w-4 h-4" />
+                                        </button>
+                                        
                                         {/* Prediction */}
                                         <div className="font-mono font-medium">
                                           {pred.predicted_home_score} - {pred.predicted_away_score}
@@ -544,6 +569,17 @@ const PredictionsOverview = () => {
       </main>
 
       <Footer />
+
+      {/* Comments Modal */}
+      {commentModal && (
+        <PredictionComments
+          predictionId={commentModal.predictionId}
+          predictorName={commentModal.predictorName}
+          matchInfo={commentModal.matchInfo}
+          isOpen={commentModal.isOpen}
+          onClose={() => setCommentModal(null)}
+        />
+      )}
     </div>
   );
 };
