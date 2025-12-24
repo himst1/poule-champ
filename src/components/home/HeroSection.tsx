@@ -66,7 +66,7 @@ const HeroSection = () => {
               variant="hero" 
               size="xl" 
               className="group"
-              onClick={() => navigate("/create-poule")}
+              onClick={() => navigate(user ? "/create-poule" : "/auth")}
             >
               Maak Je Poule
               <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
