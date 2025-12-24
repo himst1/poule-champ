@@ -5,3 +5,15 @@ verify_jwt = false
 
 [functions.predict-match]
 verify_jwt = false
+
+[functions.calculate-topscorer-points]
+verify_jwt = false
+
+[functions.calculate-winner-points]
+verify_jwt = false
+
+[functions.calculate-group-points]
+verify_jwt = false
+
+[functions.send-deadline-notifications]
+verify_jwt = false
