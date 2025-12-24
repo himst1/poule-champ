@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Trophy, Users, ArrowLeft, Share2, Copy, Check, Target, Loader2, Lock, Clock, Brain, Star, StarOff, Calendar, X, Save, Settings, Goal, Eye, AlertTriangle } from "lucide-react";
+import { Trophy, Users, ArrowLeft, Share2, Copy, Check, Target, Loader2, Lock, Clock, Brain, Star, StarOff, Calendar, X, Save, Settings, Goal, Eye, AlertTriangle, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -28,6 +28,7 @@ import GroupStandingsPrediction from "@/components/GroupStandingsPrediction";
 import { DeadlineNotificationBanner } from "@/components/DeadlineNotificationBanner";
 import { PushNotificationToggle } from "@/components/PushNotificationToggle";
 import { ListOrdered } from "lucide-react";
+import { PouleAnalytics } from "@/components/PouleAnalytics";
 // Get all unique country names from COUNTRY_CODES (defined below)
 const ALL_COUNTRIES = [
   "Argentinië", "Australië", "Bahrein", "België", "Bolivia", "Brazilië",
@@ -241,7 +242,7 @@ const PouleDetail = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<"ranking" | "matches" | "predictions" | "groups" | "topscorer" | "winner">("ranking");
+  const [activeTab, setActiveTab] = useState<"ranking" | "matches" | "predictions" | "groups" | "topscorer" | "winner" | "analytics">("ranking");
   const [copied, setCopied] = useState(false);
   const [showBulkAIPrediction, setShowBulkAIPrediction] = useState(false);
   const [bulkPredictions, setBulkPredictions] = useState<Record<string, { homeScore: number; awayScore: number }>>({});
@@ -731,6 +732,7 @@ const PouleDetail = () => {
               { id: "groups", label: "Groepseindstand", icon: ListOrdered, hasPrediction: undefined },
               { id: "topscorer", label: "Topscorer", icon: Goal, hasPrediction: hasTopscorerPrediction },
               { id: "winner", label: "WK Winnaar", icon: Trophy, hasPrediction: hasWinnerPrediction },
+              { id: "analytics", label: "Statistieken", icon: BarChart3, hasPrediction: undefined },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -1124,6 +1126,10 @@ const PouleDetail = () => {
 
           {activeTab === "winner" && (
             <WinnerVoting pouleId={id!} deadline={poule?.deadline} />
+          )}
+
+          {activeTab === "analytics" && (
+            <PouleAnalytics pouleId={id!} />
           )}
         </div>
       </main>
