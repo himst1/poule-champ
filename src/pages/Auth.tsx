@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,13 +23,16 @@ const Auth = () => {
   
   const { signIn, signUp, user, loading } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
+
+  const returnUrl = searchParams.get("returnUrl") || "/matches";
 
   useEffect(() => {
     if (!loading && user) {
-      navigate("/matches");
+      navigate(returnUrl);
     }
-  }, [user, loading, navigate]);
+  }, [user, loading, navigate, returnUrl]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -84,7 +87,7 @@ const Auth = () => {
             title: "Welkom terug!",
             description: "Je bent succesvol ingelogd",
           });
-          navigate("/matches");
+          navigate(returnUrl);
         }
       } else {
         const { error } = await signUp(email, password, displayName);
@@ -107,7 +110,7 @@ const Auth = () => {
             title: "Account aangemaakt!",
             description: "Je kunt nu inloggen en voorspellingen doen",
           });
-          navigate("/matches");
+          navigate(returnUrl);
         }
       }
     } finally {
