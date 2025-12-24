@@ -24,8 +24,10 @@ import { MatchDeadlineBadge } from "@/components/DeadlineWarning";
 import { MatchdayOverview } from "@/components/MatchdayOverview";
 import TopscorerVoting from "@/components/TopscorerVoting";
 import WinnerVoting from "@/components/WinnerVoting";
+import GroupStandingsPrediction from "@/components/GroupStandingsPrediction";
 import { DeadlineNotificationBanner } from "@/components/DeadlineNotificationBanner";
 import { PushNotificationToggle } from "@/components/PushNotificationToggle";
+import { ListOrdered } from "lucide-react";
 // Get all unique country names from COUNTRY_CODES (defined below)
 const ALL_COUNTRIES = [
   "Argentinië", "Australië", "Bahrein", "België", "Bolivia", "Brazilië",
@@ -239,7 +241,7 @@ const PouleDetail = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<"ranking" | "matches" | "predictions" | "topscorer" | "winner">("ranking");
+  const [activeTab, setActiveTab] = useState<"ranking" | "matches" | "predictions" | "groups" | "topscorer" | "winner">("ranking");
   const [copied, setCopied] = useState(false);
   const [showBulkAIPrediction, setShowBulkAIPrediction] = useState(false);
   const [bulkPredictions, setBulkPredictions] = useState<Record<string, { homeScore: number; awayScore: number }>>({});
@@ -726,6 +728,7 @@ const PouleDetail = () => {
               { id: "ranking", label: "Ranking", icon: Trophy, hasPrediction: undefined },
               { id: "matches", label: "Wedstrijden", icon: Target, hasPrediction: undefined },
               { id: "predictions", label: "Mijn Voorspellingen", icon: Users, hasPrediction: undefined },
+              { id: "groups", label: "Groepseindstand", icon: ListOrdered, hasPrediction: undefined },
               { id: "topscorer", label: "Topscorer", icon: Goal, hasPrediction: hasTopscorerPrediction },
               { id: "winner", label: "WK Winnaar", icon: Trophy, hasPrediction: hasWinnerPrediction },
             ].map((tab) => (
@@ -1109,6 +1112,10 @@ const PouleDetail = () => {
                 )}
               </div>
             </div>
+          )}
+
+          {activeTab === "groups" && (
+            <GroupStandingsPrediction pouleId={id!} />
           )}
 
           {activeTab === "topscorer" && (
