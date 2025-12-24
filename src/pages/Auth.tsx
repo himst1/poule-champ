@@ -110,7 +110,11 @@ const Auth = () => {
             title: "Account aangemaakt!",
             description: "Je kunt nu inloggen en voorspellingen doen",
           });
-          navigate(returnUrl);
+          // Add welcome parameter for new users going to create-poule
+          const redirectUrl = returnUrl.includes("/create-poule") 
+            ? `${returnUrl}${returnUrl.includes("?") ? "&" : "?"}welcome=true`
+            : returnUrl;
+          navigate(redirectUrl);
         }
       }
     } finally {
