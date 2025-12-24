@@ -1,7 +1,7 @@
 import { 
   Trophy, UserPlus, Users, Target, Award, BarChart3, Settings, Bell, 
   HelpCircle, ChevronRight, CheckCircle, QrCode, Share2, Calendar,
-  Lock, Zap, ArrowUp
+  Lock, Zap, ArrowUp, Medal, ListOrdered, Goal
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -437,31 +437,155 @@ const Guide = () => {
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-6">
+              <CardContent className="space-y-8">
                 <p className="text-muted-foreground">
-                  Hoe nauwkeuriger je voorspelling, hoe meer punten je verdient:
+                  Verzamel punten door wedstrijden, groepseindstanden, de topscorer en de WK winnaar correct te voorspellen.
                 </p>
 
-                <div className="grid sm:grid-cols-3 gap-4">
-                  <div className="p-6 rounded-lg bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/30 text-center">
-                    <div className="text-4xl font-display font-bold text-primary mb-2">3</div>
-                    <h4 className="font-semibold mb-1">Exacte Score</h4>
-                    <p className="text-sm text-muted-foreground">Je voorspelt precies de juiste uitslag</p>
+                {/* Wedstrijdvoorspellingen */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Target className="w-5 h-5 text-primary" />
+                    <h3 className="font-semibold text-lg">Wedstrijdvoorspellingen</h3>
                   </div>
-                  <div className="p-6 rounded-lg bg-secondary/50 border border-border/50 text-center">
-                    <div className="text-4xl font-display font-bold mb-2">2</div>
-                    <h4 className="font-semibold mb-1">Juist Doelpuntverschil</h4>
-                    <p className="text-sm text-muted-foreground">Winnaar + verschil kloppen</p>
-                  </div>
-                  <div className="p-6 rounded-lg bg-secondary/50 border border-border/50 text-center">
-                    <div className="text-4xl font-display font-bold mb-2">1</div>
-                    <h4 className="font-semibold mb-1">Juiste Winnaar</h4>
-                    <p className="text-sm text-muted-foreground">Alleen de winnaar is correct</p>
+                  <div className="grid sm:grid-cols-3 gap-4">
+                    <div className="p-6 rounded-lg bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/30 text-center">
+                      <div className="text-4xl font-display font-bold text-primary mb-2">5</div>
+                      <h4 className="font-semibold mb-1">Exacte Score</h4>
+                      <p className="text-sm text-muted-foreground">Je voorspelt precies de juiste uitslag</p>
+                    </div>
+                    <div className="p-6 rounded-lg bg-secondary/50 border border-border/50 text-center">
+                      <div className="text-4xl font-display font-bold mb-2">2</div>
+                      <h4 className="font-semibold mb-1">Juist Resultaat</h4>
+                      <p className="text-sm text-muted-foreground">Winnaar of gelijkspel correct</p>
+                    </div>
+                    <div className="p-6 rounded-lg bg-secondary/50 border border-border/50 text-center">
+                      <div className="text-4xl font-display font-bold mb-2">3</div>
+                      <h4 className="font-semibold mb-1">Penalty Winnaar</h4>
+                      <p className="text-sm text-muted-foreground">Correcte winnaar bij strafschoppen (knock-out)</p>
+                    </div>
                   </div>
                 </div>
 
+                {/* Groepseindstanden */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <ListOrdered className="w-5 h-5 text-primary" />
+                    <h3 className="font-semibold text-lg">Groepseindstanden</h3>
+                  </div>
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div className="p-6 rounded-lg bg-gradient-to-br from-blue-500/20 to-blue-500/5 border border-blue-500/30 text-center">
+                      <div className="text-4xl font-display font-bold text-blue-500 mb-2">3</div>
+                      <h4 className="font-semibold mb-1">Per Correcte Positie</h4>
+                      <p className="text-sm text-muted-foreground">Voor elk team op de juiste plek in de groep</p>
+                    </div>
+                    <div className="p-6 rounded-lg bg-gradient-to-br from-green-500/20 to-green-500/5 border border-green-500/30 text-center">
+                      <div className="text-4xl font-display font-bold text-green-500 mb-2">+10</div>
+                      <h4 className="font-semibold mb-1">Bonus Alle Correct</h4>
+                      <p className="text-sm text-muted-foreground">Extra bonus als alle 4 posities kloppen</p>
+                    </div>
+                  </div>
+                  <div className="p-4 rounded-lg bg-secondary border border-border">
+                    <p className="text-sm text-muted-foreground">
+                      <strong>Maximum per groep:</strong> 3×4 + 10 = <strong className="text-foreground">22 punten</strong> 
+                      <span className="mx-2">|</span>
+                      <strong>Totaal 8 groepen:</strong> 8×22 = <strong className="text-foreground">176 punten mogelijk</strong>
+                    </p>
+                  </div>
+                </div>
+
+                {/* Topscorer */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Goal className="w-5 h-5 text-primary" />
+                    <h3 className="font-semibold text-lg">Topscorer Voorspelling</h3>
+                  </div>
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div className="p-6 rounded-lg bg-gradient-to-br from-amber-500/20 to-amber-500/5 border border-amber-500/30 text-center">
+                      <div className="text-4xl font-display font-bold text-amber-500 mb-2">15</div>
+                      <h4 className="font-semibold mb-1">Exacte Topscorer</h4>
+                      <p className="text-sm text-muted-foreground">Je voorspelde speler wordt topscorer</p>
+                    </div>
+                    <div className="p-6 rounded-lg bg-secondary/50 border border-border/50 text-center">
+                      <div className="text-4xl font-display font-bold mb-2">3</div>
+                      <h4 className="font-semibold mb-1">Speler in Top 3</h4>
+                      <p className="text-sm text-muted-foreground">Je voorspelde speler eindigt in top 3 scorers</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* WK Winnaar */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Trophy className="w-5 h-5 text-yellow-500" />
+                    <h3 className="font-semibold text-lg">WK Winnaar Voorspelling</h3>
+                  </div>
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div className="p-6 rounded-lg bg-gradient-to-br from-yellow-500/20 to-yellow-500/5 border border-yellow-500/30 text-center">
+                      <div className="text-4xl font-display font-bold text-yellow-500 mb-2">25</div>
+                      <h4 className="font-semibold mb-1">Juiste Winnaar</h4>
+                      <p className="text-sm text-muted-foreground">Je voorspelde land wint het WK</p>
+                    </div>
+                    <div className="p-6 rounded-lg bg-secondary/50 border border-border/50 text-center">
+                      <div className="flex items-center justify-center gap-1 mb-2">
+                        <Medal className="w-8 h-8 text-gray-400" />
+                      </div>
+                      <div className="text-4xl font-display font-bold mb-2">5</div>
+                      <h4 className="font-semibold mb-1">Finalist</h4>
+                      <p className="text-sm text-muted-foreground">Je voorspelde land haalt de finale</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Samenvatting */}
+                <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
+                  <h4 className="font-semibold mb-3 flex items-center gap-2">
+                    <CheckCircle className="w-5 h-5 text-primary" />
+                    Punten Samenvatting
+                  </h4>
+                  <div className="grid sm:grid-cols-2 gap-x-8 gap-y-2 text-sm">
+                    <div className="flex justify-between py-1 border-b border-border/30">
+                      <span>Exacte score</span>
+                      <span className="font-bold">5 punten</span>
+                    </div>
+                    <div className="flex justify-between py-1 border-b border-border/30">
+                      <span>Juist resultaat</span>
+                      <span className="font-bold">2 punten</span>
+                    </div>
+                    <div className="flex justify-between py-1 border-b border-border/30">
+                      <span>Penalty winnaar (knock-out)</span>
+                      <span className="font-bold">3 punten</span>
+                    </div>
+                    <div className="flex justify-between py-1 border-b border-border/30">
+                      <span>Groep positie correct</span>
+                      <span className="font-bold">3 punten</span>
+                    </div>
+                    <div className="flex justify-between py-1 border-b border-border/30">
+                      <span>Groep alle 4 correct</span>
+                      <span className="font-bold">+10 bonus</span>
+                    </div>
+                    <div className="flex justify-between py-1 border-b border-border/30">
+                      <span>Exacte topscorer</span>
+                      <span className="font-bold">15 punten</span>
+                    </div>
+                    <div className="flex justify-between py-1 border-b border-border/30">
+                      <span>Topscorer in top 3</span>
+                      <span className="font-bold">3 punten</span>
+                    </div>
+                    <div className="flex justify-between py-1 border-b border-border/30">
+                      <span>WK winnaar correct</span>
+                      <span className="font-bold text-yellow-500">25 punten</span>
+                    </div>
+                    <div className="flex justify-between py-1">
+                      <span>Finalist (haalt finale)</span>
+                      <span className="font-bold">5 punten</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Voorbeelden */}
                 <div className="p-4 rounded-lg bg-secondary border border-border">
-                  <h4 className="font-semibold mb-3">Voorbeelden</h4>
+                  <h4 className="font-semibold mb-3">Voorbeelden Wedstrijdvoorspellingen</h4>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between items-center py-2 border-b border-border/50">
                       <span>Wedstrijd: <strong>Nederland 2-1 Duitsland</strong></span>
@@ -469,15 +593,15 @@ const Guide = () => {
                     </div>
                     <div className="flex justify-between items-center py-2">
                       <span>Voorspelling: 2-1</span>
-                      <span className="font-bold text-primary">3 punten (exact)</span>
+                      <span className="font-bold text-primary">5 punten (exact)</span>
                     </div>
                     <div className="flex justify-between items-center py-2">
                       <span>Voorspelling: 3-2</span>
-                      <span className="font-bold">2 punten (verschil)</span>
+                      <span className="font-bold">2 punten (juist resultaat)</span>
                     </div>
                     <div className="flex justify-between items-center py-2">
                       <span>Voorspelling: 1-0</span>
-                      <span className="font-bold">1 punt (winnaar)</span>
+                      <span className="font-bold">2 punten (juist resultaat)</span>
                     </div>
                     <div className="flex justify-between items-center py-2">
                       <span>Voorspelling: 0-1</span>
