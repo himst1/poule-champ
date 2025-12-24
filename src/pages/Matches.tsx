@@ -99,6 +99,8 @@ type Match = {
   kickoff_time: string;
   phase: string | null;
   status: "pending" | "live" | "finished";
+  stadium: string | null;
+  city: string | null;
 };
 
 type Prediction = {
@@ -1098,27 +1100,38 @@ const MatchRow = ({ match, prediction, isLoggedIn, userId, pouleId, bulkPredicti
     : homeScore !== "" || awayScore !== "";
 
   return (
-    <div className={`flex items-center gap-2 md:gap-4 p-3 rounded-lg transition-all ${
+    <div className={`flex flex-col gap-2 p-3 rounded-lg transition-all ${
       prediction ? "bg-primary/5 border border-primary/20" : "bg-card border border-border/50 hover:border-border"
     }`}>
-      {/* Time / Countdown */}
-      <div className="w-20 shrink-0 flex flex-col items-center gap-0.5">
-        <span className="text-xs text-muted-foreground font-medium">
-          {format(kickoffDate, "HH:mm")}
-        </span>
-        {canPredict && <CountdownTimer kickoffDate={kickoffDate} />}
-      </div>
+      {/* Stadium & City Info */}
+      {(match.stadium || match.city) && (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground pl-1">
+          <span className="truncate">
+            {[match.stadium, match.city].filter(Boolean).join(" • ")}
+          </span>
+        </div>
+      )}
 
-      {/* Phase Badge */}
-      <div className="hidden sm:block w-20 shrink-0">
-        <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-medium truncate ${
-          match.phase?.startsWith("Groep") 
-            ? "bg-primary/10 text-primary"
-            : "bg-accent/10 text-accent"
-        }`}>
-          {match.phase}
-        </span>
-      </div>
+      {/* Main match row */}
+      <div className="flex items-center gap-2 md:gap-4">
+        {/* Time / Countdown */}
+        <div className="w-20 shrink-0 flex flex-col items-center gap-0.5">
+          <span className="text-xs text-muted-foreground font-medium">
+            {format(kickoffDate, "HH:mm")}
+          </span>
+          {canPredict && <CountdownTimer kickoffDate={kickoffDate} />}
+        </div>
+
+        {/* Phase Badge */}
+        <div className="hidden sm:block w-20 shrink-0">
+          <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-medium truncate ${
+            match.phase?.startsWith("Groep") 
+              ? "bg-primary/10 text-primary"
+              : "bg-accent/10 text-accent"
+          }`}>
+            {match.phase}
+          </span>
+        </div>
 
       {/* Home Team */}
       <div className="flex-1 flex items-center justify-end gap-2 min-w-0">
@@ -1220,16 +1233,17 @@ const MatchRow = ({ match, prediction, isLoggedIn, userId, pouleId, bulkPredicti
         ) : null}
       </div>
 
-      {/* AI Prediction Modal */}
-      <AIPredictionModal
-        isOpen={showAIPrediction}
-        onClose={() => setShowAIPrediction(false)}
-        homeTeam={match.home_team}
-        awayTeam={match.away_team}
-        phase={match.phase}
-        kickoffTime={match.kickoff_time}
-        onApplyPrediction={isLoggedIn ? handleApplyAIPrediction : undefined}
-      />
+        {/* AI Prediction Modal */}
+        <AIPredictionModal
+          isOpen={showAIPrediction}
+          onClose={() => setShowAIPrediction(false)}
+          homeTeam={match.home_team}
+          awayTeam={match.away_team}
+          phase={match.phase}
+          kickoffTime={match.kickoff_time}
+          onApplyPrediction={isLoggedIn ? handleApplyAIPrediction : undefined}
+        />
+      </div>
     </div>
   );
 };
