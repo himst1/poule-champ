@@ -4,9 +4,11 @@ import LiveLeaderboard from "@/components/LiveLeaderboard";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 
 const HeroSection = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   // Get user's first poule for the live leaderboard demo
   const { data: userPoule } = useQuery({
@@ -58,14 +60,16 @@ const HeroSection = () => {
             Real-time scores, automatische puntentelling, en Stripe betalingen.
           </p>
 
-          {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16 animate-slide-up" style={{ animationDelay: "0.2s" }}>
-            <Button variant="hero" size="xl" className="w-full sm:w-auto group">
+          {/* CTA Button */}
+          <div className="flex items-center justify-center mb-16 animate-slide-up" style={{ animationDelay: "0.2s" }}>
+            <Button 
+              variant="hero" 
+              size="xl" 
+              className="group"
+              onClick={() => navigate("/create-poule")}
+            >
               Maak Je Poule
               <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
-            </Button>
-            <Button variant="glass" size="xl" className="w-full sm:w-auto">
-              Bekijk Demo
             </Button>
           </div>
 
