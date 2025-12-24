@@ -126,6 +126,7 @@ export type Database = {
           away_flag: string | null
           away_score: number | null
           away_team: string
+          city: string | null
           created_at: string
           external_id: number | null
           home_flag: string | null
@@ -136,6 +137,7 @@ export type Database = {
           kickoff_time: string
           penalty_winner: string | null
           phase: string | null
+          stadium: string | null
           status: Database["public"]["Enums"]["match_status"]
           updated_at: string
         }
@@ -143,6 +145,7 @@ export type Database = {
           away_flag?: string | null
           away_score?: number | null
           away_team: string
+          city?: string | null
           created_at?: string
           external_id?: number | null
           home_flag?: string | null
@@ -153,6 +156,7 @@ export type Database = {
           kickoff_time: string
           penalty_winner?: string | null
           phase?: string | null
+          stadium?: string | null
           status?: Database["public"]["Enums"]["match_status"]
           updated_at?: string
         }
@@ -160,6 +164,7 @@ export type Database = {
           away_flag?: string | null
           away_score?: number | null
           away_team?: string
+          city?: string | null
           created_at?: string
           external_id?: number | null
           home_flag?: string | null
@@ -170,6 +175,7 @@ export type Database = {
           kickoff_time?: string
           penalty_winner?: string | null
           phase?: string | null
+          stadium?: string | null
           status?: Database["public"]["Enums"]["match_status"]
           updated_at?: string
         }
