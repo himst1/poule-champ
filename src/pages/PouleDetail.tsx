@@ -29,6 +29,7 @@ import { DeadlineNotificationBanner } from "@/components/DeadlineNotificationBan
 import { PushNotificationToggle } from "@/components/PushNotificationToggle";
 import { ListOrdered } from "lucide-react";
 import { PouleAnalytics } from "@/components/PouleAnalytics";
+import { PouleChat } from "@/components/PouleChat";
 // Get all unique country names from COUNTRY_CODES (defined below)
 const ALL_COUNTRIES = [
   "Argentinië", "Australië", "Bahrein", "België", "Bolivia", "Brazilië",
@@ -1143,6 +1144,9 @@ const PouleDetail = () => {
         matches={predictableMatches}
         onApplyPredictions={handleBulkPredictionsApplied}
       />
+
+      {/* Poule Chat */}
+      <PouleChat pouleId={id!} pouleName={poule.name} />
     </div>
   );
 };
