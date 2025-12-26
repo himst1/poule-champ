@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Trophy, Users, CreditCard, ChevronRight, Loader2, Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Header from "@/components/layout/Header";
@@ -26,6 +27,20 @@ const CreatePoule = () => {
     maxMembers: 50,
   });
 
+  // Fetch active tournament to link the poule
+  const { data: activeTournament } = useQuery({
+    queryKey: ["active-tournament"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("tournaments")
+        .select("id, name")
+        .eq("status", "active")
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
@@ -43,7 +58,7 @@ const CreatePoule = () => {
 
     setIsCreating(true);
     try {
-      // Create the poule
+      // Create the poule with tournament_id linked
       const { data: poule, error: pouleError } = await supabase
         .from("poules")
         .insert({
@@ -52,6 +67,7 @@ const CreatePoule = () => {
           entry_fee: formData.entryFee,
           max_members: formData.maxMembers,
           creator_id: user.id,
+          tournament_id: activeTournament?.id || null,
         })
         .select()
         .single();
@@ -74,7 +90,9 @@ const CreatePoule = () => {
       
       toast({
         title: "Poule aangemaakt!",
-        description: "Deel de uitnodigingscode met je vrienden",
+        description: activeTournament 
+          ? `Gekoppeld aan ${activeTournament.name}. Deel de uitnodigingscode met je vrienden.`
+          : "Deel de uitnodigingscode met je vrienden",
       });
     } catch (error: any) {
       toast({
@@ -296,6 +314,12 @@ const CreatePoule = () => {
                     <div className="flex justify-between pt-3 border-t border-border">
                       <span className="text-muted-foreground">Potentiële pot</span>
                       <span className="font-display font-bold text-primary">€{formData.entryFee * formData.maxMembers}</span>
+                    </div>
+                  )}
+                  {activeTournament && (
+                    <div className="flex justify-between pt-3 border-t border-border">
+                      <span className="text-muted-foreground">Toernooi</span>
+                      <span className="font-medium text-primary">{activeTournament.name}</span>
                     </div>
                   )}
                 </div>
