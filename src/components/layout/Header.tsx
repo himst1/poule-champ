@@ -80,10 +80,16 @@ const Header = () => {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="center" className="w-48">
                 <DropdownMenuItem asChild>
-                  <a href="#features" className="cursor-pointer">Features</a>
+                  <a href="/#features" className="cursor-pointer">Features</a>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <a href="#how-it-works" className="cursor-pointer">Hoe werkt het</a>
+                  <a href="/#how-it-works" className="cursor-pointer">Hoe werkt het</a>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <a href="/#pricing" className="cursor-pointer">Prijzen</a>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <a href="/#faq" className="cursor-pointer">FAQ</a>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <a href="/handleiding" className="cursor-pointer">Handleiding</a>
@@ -191,18 +197,32 @@ const Header = () => {
               <div className="h-px bg-border/50 my-2" />
               
               <a 
-                href="#features" 
+                href="/#features" 
                 className="px-4 py-3 text-muted-foreground hover:text-foreground hover:bg-secondary/50 rounded-lg transition-all"
                 onClick={() => setIsMenuOpen(false)}
               >
                 Features
               </a>
               <a 
-                href="#how-it-works" 
+                href="/#how-it-works" 
                 className="px-4 py-3 text-muted-foreground hover:text-foreground hover:bg-secondary/50 rounded-lg transition-all"
                 onClick={() => setIsMenuOpen(false)}
               >
                 Hoe werkt het
+              </a>
+              <a 
+                href="/#pricing" 
+                className="px-4 py-3 text-muted-foreground hover:text-foreground hover:bg-secondary/50 rounded-lg transition-all"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Prijzen
+              </a>
+              <a 
+                href="/#faq" 
+                className="px-4 py-3 text-muted-foreground hover:text-foreground hover:bg-secondary/50 rounded-lg transition-all"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                FAQ
               </a>
               <a 
                 href="/handleiding" 
