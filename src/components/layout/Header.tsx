@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import ThemeToggle from "@/components/ThemeToggle";
+import { PredictionProgress } from "@/components/PredictionProgress";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -93,6 +94,7 @@ const Header = () => {
 
           {/* Desktop Right Section */}
           <div className="hidden lg:flex items-center gap-2">
+            <PredictionProgress />
             <ThemeToggle />
             
             {loading ? null : user ? (
@@ -136,6 +138,7 @@ const Header = () => {
 
           {/* Mobile/Tablet Controls */}
           <div className="flex lg:hidden items-center gap-2">
+            <PredictionProgress />
             <ThemeToggle />
             <button
               className="p-2 text-foreground hover:bg-secondary rounded-lg transition-colors"
