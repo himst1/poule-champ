@@ -19,21 +19,30 @@ export type Database = {
           created_at: string
           group_name: string
           id: string
+          locked_at: string | null
+          locked_by: string | null
           standings: Json
+          status: string | null
           updated_at: string
         }
         Insert: {
           created_at?: string
           group_name: string
           id?: string
+          locked_at?: string | null
+          locked_by?: string | null
           standings: Json
+          status?: string | null
           updated_at?: string
         }
         Update: {
           created_at?: string
           group_name?: string
           id?: string
+          locked_at?: string | null
+          locked_by?: string | null
           standings?: Json
+          status?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -42,22 +51,31 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          locked_at: string | null
+          locked_by: string | null
           setting_key: string
           setting_value: Json
+          status: string | null
           updated_at: string
         }
         Insert: {
           created_at?: string
           id?: string
+          locked_at?: string | null
+          locked_by?: string | null
           setting_key: string
           setting_value?: Json
+          status?: string | null
           updated_at?: string
         }
         Update: {
           created_at?: string
           id?: string
+          locked_at?: string | null
+          locked_by?: string | null
           setting_key?: string
           setting_value?: Json
+          status?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -370,6 +388,7 @@ export type Database = {
           prize_distribution: Json | null
           scoring_rules: Json | null
           status: Database["public"]["Enums"]["poule_status"]
+          tournament_id: string | null
           updated_at: string
         }
         Insert: {
@@ -386,6 +405,7 @@ export type Database = {
           prize_distribution?: Json | null
           scoring_rules?: Json | null
           status?: Database["public"]["Enums"]["poule_status"]
+          tournament_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -402,6 +422,7 @@ export type Database = {
           prize_distribution?: Json | null
           scoring_rules?: Json | null
           status?: Database["public"]["Enums"]["poule_status"]
+          tournament_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -410,6 +431,13 @@ export type Database = {
             columns: ["creator_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "poules_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
             referencedColumns: ["id"]
           },
         ]
@@ -585,6 +613,45 @@ export type Database = {
           },
         ]
       }
+      result_audit_log: {
+        Row: {
+          action: string
+          created_at: string | null
+          entity_id: string
+          entity_type: string
+          id: string
+          new_value: Json | null
+          notes: string | null
+          old_value: Json | null
+          performed_at: string | null
+          performed_by: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string | null
+          entity_id: string
+          entity_type: string
+          id?: string
+          new_value?: Json | null
+          notes?: string | null
+          old_value?: Json | null
+          performed_at?: string | null
+          performed_by?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string | null
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          new_value?: Json | null
+          notes?: string | null
+          old_value?: Json | null
+          performed_at?: string | null
+          performed_by?: string | null
+        }
+        Relationships: []
+      }
       topscorer_predictions: {
         Row: {
           created_at: string
@@ -629,6 +696,81 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      tournaments: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+          status: string | null
+          type: string | null
+          updated_at: string | null
+          year: number
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name: string
+          status?: string | null
+          type?: string | null
+          updated_at?: string | null
+          year: number
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          status?: string | null
+          type?: string | null
+          updated_at?: string | null
+          year?: number
+        }
+        Relationships: []
+      }
+      user_all_time_stats: {
+        Row: {
+          avg_points_per_tournament: number | null
+          best_finish: number | null
+          correct_results: number | null
+          correct_scores: number | null
+          created_at: string | null
+          podium_finishes: number | null
+          total_points: number | null
+          total_predictions: number | null
+          total_tournaments: number | null
+          tournament_wins: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          avg_points_per_tournament?: number | null
+          best_finish?: number | null
+          correct_results?: number | null
+          correct_scores?: number | null
+          created_at?: string | null
+          podium_finishes?: number | null
+          total_points?: number | null
+          total_predictions?: number | null
+          total_tournaments?: number | null
+          tournament_wins?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          avg_points_per_tournament?: number | null
+          best_finish?: number | null
+          correct_results?: number | null
+          correct_scores?: number | null
+          created_at?: string | null
+          podium_finishes?: number | null
+          total_points?: number | null
+          total_predictions?: number | null
+          total_tournaments?: number | null
+          tournament_wins?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {
