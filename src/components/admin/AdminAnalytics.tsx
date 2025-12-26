@@ -4,8 +4,19 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,7 +28,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Trophy, Medal, Users, Loader2, TrendingUp, Award, Calendar, BarChart3, Target, CheckCircle } from "lucide-react";
+import { Trophy, Medal, Users, Loader2, TrendingUp, Award, Calendar, BarChart3, Target, CheckCircle, Plus, Play, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface Tournament {
@@ -49,10 +60,24 @@ interface UserRecord {
   description: string;
 }
 
+const TOURNAMENT_TYPES = [
+  { value: "world_cup", label: "WK (Wereldkampioenschap)" },
+  { value: "euro", label: "EK (Europees Kampioenschap)" },
+  { value: "copa_america", label: "Copa América" },
+  { value: "nations_league", label: "Nations League" },
+  { value: "other", label: "Anders" },
+];
+
 const AdminAnalytics = () => {
   const queryClient = useQueryClient();
   const [selectedTournament, setSelectedTournament] = useState<string>("");
   const [isUpdatingStats, setIsUpdatingStats] = useState(false);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [newTournament, setNewTournament] = useState({
+    name: "",
+    year: new Date().getFullYear(),
+    type: "world_cup",
+  });
 
   // Fetch tournaments
   const { data: tournaments, isLoading: isLoadingTournaments } = useQuery({
@@ -275,22 +300,75 @@ const AdminAnalytics = () => {
 
   // Create tournament mutation
   const createTournamentMutation = useMutation({
-    mutationFn: async ({ name, year }: { name: string; year: number }) => {
+    mutationFn: async ({ name, year, type }: { name: string; year: number; type: string }) => {
       const { error } = await supabase
         .from("tournaments")
-        .insert({ name, year, type: "world_cup", status: "upcoming" });
+        .insert({ name, year, type, status: "upcoming" });
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tournaments"] });
       toast.success("Toernooi aangemaakt");
+      setIsCreateDialogOpen(false);
+      setNewTournament({ name: "", year: new Date().getFullYear(), type: "world_cup" });
     },
     onError: (error) => {
       toast.error("Fout bij aanmaken: " + error.message);
     },
   });
 
+  // Activate tournament mutation
+  const activateTournamentMutation = useMutation({
+    mutationFn: async (tournamentId: string) => {
+      // First deactivate any active tournament
+      await supabase
+        .from("tournaments")
+        .update({ status: "upcoming" })
+        .eq("status", "active");
+      
+      // Then activate the selected one
+      const { error } = await supabase
+        .from("tournaments")
+        .update({ status: "active" })
+        .eq("id", tournamentId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tournaments"] });
+      toast.success("Toernooi geactiveerd");
+    },
+    onError: (error) => {
+      toast.error("Fout bij activeren: " + error.message);
+    },
+  });
+
+  // Delete tournament mutation
+  const deleteTournamentMutation = useMutation({
+    mutationFn: async (tournamentId: string) => {
+      const { error } = await supabase
+        .from("tournaments")
+        .delete()
+        .eq("id", tournamentId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tournaments"] });
+      toast.success("Toernooi verwijderd");
+    },
+    onError: (error) => {
+      toast.error("Fout bij verwijderen: " + error.message);
+    },
+  });
+
   const activeTournament = tournaments?.find(t => t.status === "active");
+
+  const handleCreateTournament = () => {
+    if (!newTournament.name.trim()) {
+      toast.error("Vul een naam in voor het toernooi");
+      return;
+    }
+    createTournamentMutation.mutate(newTournament);
+  };
 
   if (isLoadingTournaments || isLoadingStats) {
     return (
@@ -315,6 +393,78 @@ const AdminAnalytics = () => {
                 <CardDescription>Beheer toernooien en sluit af voor all-time statistieken</CardDescription>
               </div>
             </div>
+            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="gap-2">
+                  <Plus className="w-4 h-4" />
+                  Nieuw Toernooi
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Nieuw Toernooi Aanmaken</DialogTitle>
+                  <DialogDescription>
+                    Maak een nieuw toernooi aan voor het bijhouden van voorspellingen en statistieken.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="tournament-name">Naam</Label>
+                    <Input
+                      id="tournament-name"
+                      placeholder="bijv. WK 2026"
+                      value={newTournament.name}
+                      onChange={(e) => setNewTournament({ ...newTournament, name: e.target.value })}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="tournament-year">Jaar</Label>
+                      <Input
+                        id="tournament-year"
+                        type="number"
+                        min={2020}
+                        max={2100}
+                        value={newTournament.year}
+                        onChange={(e) => setNewTournament({ ...newTournament, year: parseInt(e.target.value) || new Date().getFullYear() })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="tournament-type">Type</Label>
+                      <Select
+                        value={newTournament.type}
+                        onValueChange={(value) => setNewTournament({ ...newTournament, type: value })}
+                      >
+                        <SelectTrigger id="tournament-type">
+                          <SelectValue placeholder="Selecteer type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {TOURNAMENT_TYPES.map((type) => (
+                            <SelectItem key={type.value} value={type.value}>
+                              {type.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+                    Annuleren
+                  </Button>
+                  <Button 
+                    onClick={handleCreateTournament} 
+                    disabled={createTournamentMutation.isPending}
+                  >
+                    {createTournamentMutation.isPending ? (
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    ) : null}
+                    Aanmaken
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -355,16 +505,96 @@ const AdminAnalytics = () => {
             </div>
           )}
 
-          <div className="flex flex-wrap gap-2">
-            {tournaments?.map(t => (
-              <Badge 
-                key={t.id} 
-                variant={t.status === "active" ? "default" : t.status === "completed" ? "secondary" : "outline"}
-              >
-                {t.name} ({t.status === "completed" ? "Afgerond" : t.status === "active" ? "Actief" : "Gepland"})
-              </Badge>
-            ))}
-          </div>
+          {/* Tournament List */}
+          {tournaments && tournaments.length > 0 ? (
+            <div className="border rounded-lg overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Toernooi</TableHead>
+                    <TableHead>Jaar</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Acties</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {tournaments.map((tournament) => (
+                    <TableRow key={tournament.id}>
+                      <TableCell className="font-medium">{tournament.name}</TableCell>
+                      <TableCell>{tournament.year}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">
+                          {TOURNAMENT_TYPES.find(t => t.value === tournament.type)?.label || tournament.type}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge 
+                          variant={tournament.status === "active" ? "default" : tournament.status === "completed" ? "secondary" : "outline"}
+                        >
+                          {tournament.status === "completed" ? "Afgerond" : tournament.status === "active" ? "Actief" : "Gepland"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          {tournament.status === "upcoming" && (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="gap-1"
+                                onClick={() => activateTournamentMutation.mutate(tournament.id)}
+                                disabled={activateTournamentMutation.isPending}
+                              >
+                                <Play className="w-3 h-3" />
+                                Activeren
+                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive">
+                                    <Trash2 className="w-3 h-3" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Toernooi verwijderen?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Weet je zeker dat je "{tournament.name}" wilt verwijderen? Dit kan niet ongedaan worden gemaakt.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Annuleren</AlertDialogCancel>
+                                    <AlertDialogAction 
+                                      onClick={() => deleteTournamentMutation.mutate(tournament.id)}
+                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                    >
+                                      Verwijderen
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </>
+                          )}
+                          {tournament.status === "completed" && (
+                            <Badge variant="secondary" className="gap-1">
+                              <CheckCircle className="w-3 h-3" />
+                              Voltooid
+                            </Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground border rounded-lg border-dashed">
+              <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
+              <p>Nog geen toernooien aangemaakt.</p>
+              <p className="text-sm">Klik op "Nieuw Toernooi" om te beginnen.</p>
+            </div>
+          )}
         </CardContent>
       </Card>
 
