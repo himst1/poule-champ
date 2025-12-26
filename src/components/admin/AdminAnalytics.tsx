@@ -28,7 +28,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Trophy, Medal, Users, Loader2, TrendingUp, Award, Calendar, BarChart3, Target, CheckCircle, Plus, Play, Trash2 } from "lucide-react";
+import { Trophy, Medal, Users, Loader2, TrendingUp, Award, Calendar, BarChart3, Target, CheckCircle, Plus, Play, Trash2, FileText, CreditCard } from "lucide-react";
 import { toast } from "sonner";
 
 interface Tournament {
@@ -118,25 +118,76 @@ const AdminAnalytics = () => {
     },
   });
 
+  // Fetch poules with statistics
+  const { data: poulesWithStats } = useQuery({
+    queryKey: ["poules-with-stats"],
+    queryFn: async () => {
+      // Fetch all poules
+      const { data: poules, error: poulesError } = await supabase
+        .from("poules")
+        .select("id, name, entry_fee, max_members, status, tournament_id, created_at")
+        .order("created_at", { ascending: false });
+      if (poulesError) throw poulesError;
+
+      // Fetch member counts and total points per poule
+      const { data: members, error: membersError } = await supabase
+        .from("poule_members")
+        .select("poule_id, points, user_id");
+      if (membersError) throw membersError;
+
+      // Fetch prediction counts per poule
+      const { data: predictions, error: predictionsError } = await supabase
+        .from("predictions")
+        .select("poule_id, id");
+      if (predictionsError) throw predictionsError;
+
+      // Aggregate stats
+      const statsMap: Record<string, { memberCount: number; totalPoints: number; predictionCount: number; potValue: number }> = {};
+      
+      poules?.forEach(poule => {
+        const pouleMembers = members?.filter(m => m.poule_id === poule.id) || [];
+        const poulePredictions = predictions?.filter(p => p.poule_id === poule.id) || [];
+        
+        statsMap[poule.id] = {
+          memberCount: pouleMembers.length,
+          totalPoints: pouleMembers.reduce((sum, m) => sum + m.points, 0),
+          predictionCount: poulePredictions.length,
+          potValue: pouleMembers.length * poule.entry_fee,
+        };
+      });
+
+      return poules?.map(poule => ({
+        ...poule,
+        ...statsMap[poule.id],
+      }));
+    },
+  });
+
   // Fetch current tournament leaderboards from poule_members
   const { data: currentLeaderboard } = useQuery({
     queryKey: ["current-leaderboard"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("poule_members")
-        .select(`
-          user_id,
-          points,
-          profiles:user_id (display_name, email)
-        `)
+        .select("user_id, points")
         .order("points", { ascending: false });
       if (error) throw error;
+      
+      // Fetch profiles separately
+      const userIds = [...new Set(data?.map(m => m.user_id))];
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, display_name, email")
+        .in("id", userIds);
+      
+      const profileMap = new Map(profiles?.map(p => [p.id, p]));
       
       // Aggregate points per user across all poules
       const userPoints: Record<string, { points: number; name: string }> = {};
       data?.forEach(member => {
         const userId = member.user_id;
-        const name = member.profiles?.display_name || member.profiles?.email || "Onbekend";
+        const profile = profileMap.get(userId);
+        const name = profile?.display_name || profile?.email || "Onbekend";
         if (!userPoints[userId]) {
           userPoints[userId] = { points: 0, name };
         }
@@ -593,6 +644,205 @@ const AdminAnalytics = () => {
               <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
               <p>Nog geen toernooien aangemaakt.</p>
               <p className="text-sm">Klik op "Nieuw Toernooi" om te beginnen.</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Poules per Tournament */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
+              <FileText className="w-5 h-5 text-blue-500" />
+            </div>
+            <div>
+              <CardTitle className="text-lg">Poule Overzicht</CardTitle>
+              <CardDescription>Alle poules met statistieken per toernooi</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {poulesWithStats && poulesWithStats.length > 0 ? (
+            <div className="space-y-6">
+              {/* Summary Stats */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="p-4 rounded-lg bg-muted/50 border">
+                  <div className="flex items-center gap-3">
+                    <FileText className="w-5 h-5 text-blue-500" />
+                    <div>
+                      <p className="text-2xl font-bold">{poulesWithStats.length}</p>
+                      <p className="text-sm text-muted-foreground">Totaal Poules</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="p-4 rounded-lg bg-muted/50 border">
+                  <div className="flex items-center gap-3">
+                    <Users className="w-5 h-5 text-green-500" />
+                    <div>
+                      <p className="text-2xl font-bold">
+                        {poulesWithStats.reduce((sum, p) => sum + (p.memberCount || 0), 0)}
+                      </p>
+                      <p className="text-sm text-muted-foreground">Totaal Deelnemers</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="p-4 rounded-lg bg-muted/50 border">
+                  <div className="flex items-center gap-3">
+                    <Target className="w-5 h-5 text-purple-500" />
+                    <div>
+                      <p className="text-2xl font-bold">
+                        {poulesWithStats.reduce((sum, p) => sum + (p.predictionCount || 0), 0)}
+                      </p>
+                      <p className="text-sm text-muted-foreground">Totaal Voorspellingen</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="p-4 rounded-lg bg-muted/50 border">
+                  <div className="flex items-center gap-3">
+                    <CreditCard className="w-5 h-5 text-amber-500" />
+                    <div>
+                      <p className="text-2xl font-bold">
+                        €{poulesWithStats.reduce((sum, p) => sum + (p.potValue || 0), 0)}
+                      </p>
+                      <p className="text-sm text-muted-foreground">Totale Pot</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Group by tournament */}
+              {tournaments?.map(tournament => {
+                const tournamentPoules = poulesWithStats.filter(p => p.tournament_id === tournament.id);
+                if (tournamentPoules.length === 0) return null;
+
+                return (
+                  <div key={tournament.id} className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Trophy className="w-4 h-4 text-primary" />
+                      <h4 className="font-semibold">{tournament.name}</h4>
+                      <Badge variant={tournament.status === "active" ? "default" : "secondary"}>
+                        {tournamentPoules.length} poules
+                      </Badge>
+                    </div>
+                    <div className="border rounded-lg overflow-hidden">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Poule</TableHead>
+                            <TableHead className="text-right">Deelnemers</TableHead>
+                            <TableHead className="text-right hidden sm:table-cell">Voorspellingen</TableHead>
+                            <TableHead className="text-right hidden md:table-cell">Punten</TableHead>
+                            <TableHead className="text-right">Pot</TableHead>
+                            <TableHead className="text-right">Status</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {tournamentPoules.map(poule => (
+                            <TableRow key={poule.id}>
+                              <TableCell className="font-medium">{poule.name}</TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex items-center justify-end gap-1">
+                                  <Users className="w-3 h-3 text-muted-foreground" />
+                                  {poule.memberCount || 0}
+                                  {poule.max_members && (
+                                    <span className="text-muted-foreground">/{poule.max_members}</span>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-right hidden sm:table-cell">
+                                {poule.predictionCount || 0}
+                              </TableCell>
+                              <TableCell className="text-right hidden md:table-cell font-medium text-primary">
+                                {poule.totalPoints || 0}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {poule.entry_fee > 0 ? (
+                                  <span className="font-medium text-amber-500">€{poule.potValue || 0}</span>
+                                ) : (
+                                  <span className="text-muted-foreground">Gratis</span>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <Badge variant={
+                                  poule.status === "open" ? "default" : 
+                                  poule.status === "closed" ? "secondary" : "outline"
+                                }>
+                                  {poule.status === "open" ? "Open" : poule.status === "closed" ? "Gesloten" : "Afgerond"}
+                                </Badge>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* Unlinked poules */}
+              {(() => {
+                const unlinkedPoules = poulesWithStats.filter(p => !p.tournament_id);
+                if (unlinkedPoules.length === 0) return null;
+
+                return (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-muted-foreground" />
+                      <h4 className="font-semibold text-muted-foreground">Niet gekoppeld aan toernooi</h4>
+                      <Badge variant="outline">{unlinkedPoules.length} poules</Badge>
+                    </div>
+                    <div className="border rounded-lg overflow-hidden border-dashed">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Poule</TableHead>
+                            <TableHead className="text-right">Deelnemers</TableHead>
+                            <TableHead className="text-right hidden sm:table-cell">Voorspellingen</TableHead>
+                            <TableHead className="text-right hidden md:table-cell">Punten</TableHead>
+                            <TableHead className="text-right">Pot</TableHead>
+                            <TableHead className="text-right">Status</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {unlinkedPoules.map(poule => (
+                            <TableRow key={poule.id}>
+                              <TableCell className="font-medium">{poule.name}</TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex items-center justify-end gap-1">
+                                  <Users className="w-3 h-3 text-muted-foreground" />
+                                  {poule.memberCount || 0}
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-right hidden sm:table-cell">
+                                {poule.predictionCount || 0}
+                              </TableCell>
+                              <TableCell className="text-right hidden md:table-cell font-medium text-primary">
+                                {poule.totalPoints || 0}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {poule.entry_fee > 0 ? (
+                                  <span className="font-medium text-amber-500">€{poule.potValue || 0}</span>
+                                ) : (
+                                  <span className="text-muted-foreground">Gratis</span>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <Badge variant="outline">{poule.status}</Badge>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              <FileText className="w-12 h-12 mx-auto mb-4 opacity-50" />
+              <p>Nog geen poules aangemaakt.</p>
             </div>
           )}
         </CardContent>
