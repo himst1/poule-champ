@@ -12,6 +12,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { AIPredictionStats } from "@/components/AIPredictionStats";
 import { AIPredictionChart } from "@/components/AIPredictionChart";
+import { OnboardingChecklist } from "@/components/OnboardingChecklist";
+import { WelcomeModal } from "@/components/WelcomeModal";
 
 type PouleWithMembership = {
   id: string;
@@ -88,6 +90,26 @@ const Dashboard = () => {
     },
     enabled: !!user,
   });
+
+  // Check if user has predictions (for onboarding)
+  const { data: hasPredictions } = useQuery({
+    queryKey: ["user-has-predictions", user?.id],
+    queryFn: async () => {
+      if (!user) return false;
+      const { count } = await supabase
+        .from("predictions")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id);
+      return (count || 0) > 0;
+    },
+    enabled: !!user,
+  });
+
+  // Check if poule has multiple members (indicates invites worked)
+  const hasInvitedFriends = poules?.some(p => p.member_count > 1) || false;
+  const hasPoules = (poules?.length || 0) > 0;
+  const firstPouleId = poules?.[0]?.id;
+  const isNewUser = !hasPoules && !hasPredictions;
 
   // Fetch total stats
   const totalPoints = poules?.reduce((sum, p) => sum + p.user_points, 0) || 0;
@@ -200,6 +222,9 @@ const Dashboard = () => {
     <div className="min-h-screen bg-background">
       <Header />
       
+      {/* Welcome Modal for new users */}
+      <WelcomeModal isNewUser={isNewUser} />
+      
       <main className="pt-24 pb-12">
         <div className="container mx-auto px-4">
           {/* Welcome Section */}
@@ -212,7 +237,13 @@ const Dashboard = () => {
             </p>
           </div>
 
-          {/* Join Poule Card */}
+          {/* Onboarding Checklist */}
+          <OnboardingChecklist
+            hasPoules={hasPoules}
+            hasPredictions={hasPredictions || false}
+            hasInvitedFriends={hasInvitedFriends}
+            pouleId={firstPouleId}
+          />
           <Card className="glass-card rounded-2xl p-6 mb-8 border-dashed border-2 border-primary/30">
             <div className="flex flex-col md:flex-row md:items-center gap-4">
               <div className="flex-1">
