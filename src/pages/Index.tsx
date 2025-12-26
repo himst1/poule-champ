@@ -8,6 +8,7 @@ import TestimonialsSection from "@/components/home/TestimonialsSection";
 import FAQSection from "@/components/home/FAQSection";
 import CTASection from "@/components/home/CTASection";
 import ScrollIndicator from "@/components/ScrollIndicator";
+import TournamentBanner from "@/components/TournamentBanner";
 
 const Index = () => {
   return (
@@ -16,6 +17,12 @@ const Index = () => {
       <ScrollIndicator />
       <main>
         <HeroSection />
+        {/* Tournament Banner */}
+        <section className="py-8 bg-background">
+          <div className="container mx-auto px-4">
+            <TournamentBanner />
+          </div>
+        </section>
         <FeaturesSection />
         <HowItWorksSection />
         <PricingSection />

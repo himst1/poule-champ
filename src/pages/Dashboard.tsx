@@ -14,6 +14,7 @@ import { AIPredictionStats } from "@/components/AIPredictionStats";
 import { AIPredictionChart } from "@/components/AIPredictionChart";
 import { OnboardingChecklist } from "@/components/OnboardingChecklist";
 import { WelcomeModal } from "@/components/WelcomeModal";
+import TournamentBanner from "@/components/TournamentBanner";
 
 type PouleWithMembership = {
   id: string;
@@ -235,6 +236,11 @@ const Dashboard = () => {
             <p className="text-muted-foreground">
               Bekijk je poules en doe je voorspellingen.
             </p>
+          </div>
+
+          {/* Tournament Banner */}
+          <div className="mb-8">
+            <TournamentBanner />
           </div>
 
           {/* Onboarding Checklist */}
