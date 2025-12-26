@@ -21,6 +21,8 @@ import { BulkAIPredictionModal } from "@/components/BulkAIPredictionModal";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { AIPredictionStats } from "@/components/AIPredictionStats";
 import { AIPredictionChart } from "@/components/AIPredictionChart";
+import { FlagImage } from "@/components/FlagImage";
+import { COUNTRY_CODES, ALL_COUNTRIES, getFlagUrl } from "@/lib/flags";
 
 // Countdown hook for upcoming matches
 const useCountdown = (targetDate: Date) => {
@@ -118,82 +120,7 @@ const PHASES = [
   "Achtste finale", "Kwartfinale", "Halve finale", "Troostfinale", "Finale"
 ];
 
-// Team name to ISO country code mapping for WK 2026
-const COUNTRY_CODES: Record<string, string> = {
-  // Group A - North America
-  "Verenigde Staten": "us", "VS": "us", "USA": "us",
-  "Mexico": "mx", "Canada": "ca",
-  // Europe
-  "Nederland": "nl", "Duitsland": "de", "Frankrijk": "fr", "Spanje": "es",
-  "Engeland": "gb-eng", "Italië": "it", "Portugal": "pt", "België": "be",
-  "Kroatië": "hr", "Zwitserland": "ch", "Denemarken": "dk", "Polen": "pl",
-  "Servië": "rs", "Oekraïne": "ua", "Oostenrijk": "at", "Tsjechië": "cz",
-  "Wales": "gb-wls", "Schotland": "gb-sct", "Zweden": "se", "Noorwegen": "no",
-  "Griekenland": "gr", "Turkije": "tr", "Roemenië": "ro", "Hongarije": "hu",
-  "Slowakije": "sk", "Slovenië": "si", "Finland": "fi", "Ierland": "ie",
-  // South America
-  "Brazilië": "br", "Argentinië": "ar", "Uruguay": "uy", "Colombia": "co",
-  "Chili": "cl", "Ecuador": "ec", "Peru": "pe", "Paraguay": "py",
-  "Venezuela": "ve", "Bolivia": "bo",
-  // Africa
-  "Marokko": "ma", "Senegal": "sn", "Ghana": "gh", "Kameroen": "cm",
-  "Nigeria": "ng", "Tunesië": "tn", "Egypte": "eg", "Algerije": "dz",
-  "Zuid-Afrika": "za", "Ivoorkust": "ci", "Mali": "ml",
-  // Asia
-  "Japan": "jp", "Zuid-Korea": "kr", "Australië": "au", "Saoedi-Arabië": "sa",
-  "Iran": "ir", "Qatar": "qa", "China": "cn", "Indonesië": "id",
-  "Bahrein": "bh", "Irak": "iq", "VAE": "ae", "Oman": "om", "Jordanië": "jo",
-  "Oezbekistan": "uz", "Thailand": "th", "Vietnam": "vn", "India": "in",
-  // CONCACAF
-  "Costa Rica": "cr", "Jamaica": "jm", "Honduras": "hn", "Panama": "pa",
-  "El Salvador": "sv", "Guatemala": "gt", "Trinidad en Tobago": "tt",
-  // Oceania
-  "Nieuw-Zeeland": "nz",
-};
-
-// Get flag image URL from Flagcdn
-const getFlagUrl = (teamName: string | null): string | null => {
-  if (!teamName) return null;
-  const code = COUNTRY_CODES[teamName];
-  if (!code) return null;
-  return `https://flagcdn.com/w40/${code.toLowerCase()}.png`;
-};
-
-// Flag image component
-const FlagImage = ({ teamName, size = "sm" }: { teamName: string | null; size?: "sm" | "md" | "lg" }) => {
-  const flagUrl = getFlagUrl(teamName);
-  
-  const sizeClasses = {
-    sm: "w-7 h-5",
-    md: "w-10 h-7",
-    lg: "w-12 h-8",
-  };
-  
-  if (!flagUrl) {
-    return (
-      <div className={`${sizeClasses[size]} bg-secondary rounded flex items-center justify-center flex-shrink-0`}>
-        <span className="text-muted-foreground text-[10px]">?</span>
-      </div>
-    );
-  }
-  
-  return (
-    <img
-      src={flagUrl}
-      alt={`Vlag van ${teamName}`}
-      className={`${sizeClasses[size]} object-cover rounded shadow-sm flex-shrink-0`}
-      onError={(e) => {
-        e.currentTarget.src = "";
-        e.currentTarget.className = `${sizeClasses[size]} bg-secondary rounded flex-shrink-0`;
-      }}
-    />
-  );
-};
-
-// Get all unique country names from COUNTRY_CODES
-const ALL_COUNTRIES = Object.keys(COUNTRY_CODES).filter(
-  name => !["VS", "USA"].includes(name) // Remove duplicates
-).sort((a, b) => a.localeCompare(b, 'nl'));
+// Use centralized FlagImage and utilities from lib/flags
 
 const Matches = () => {
   const [selectedPhase, setSelectedPhase] = useState("Alle fases");

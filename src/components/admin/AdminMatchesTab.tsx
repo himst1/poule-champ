@@ -8,6 +8,7 @@ import { Trophy, Check, Loader2, Calculator } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { nl } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
+import { FlagImage } from "@/components/FlagImage";
 
 type Match = {
   id: string;
@@ -197,7 +198,7 @@ const MatchScoreCard = ({ match }: { match: Match }) => {
 
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
-              <span className="text-xl">{match.home_flag}</span>
+              <FlagImage teamName={match.home_team} size="sm" />
               <span className="font-medium">{match.home_team}</span>
             </div>
 
@@ -229,7 +230,7 @@ const MatchScoreCard = ({ match }: { match: Match }) => {
 
             <div className="flex items-center gap-2">
               <span className="font-medium">{match.away_team}</span>
-              <span className="text-xl">{match.away_flag}</span>
+              <FlagImage teamName={match.away_team} size="sm" />
             </div>
           </div>
         </div>

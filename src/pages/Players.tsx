@@ -22,6 +22,7 @@ import { Search, Users, Goal, Shield, Shirt, User, Plus, Trash2, FileJson, Layou
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { z } from "zod";
+import { FlagImage } from "@/components/FlagImage";
 
 // WK 2026 landen met vlaggen
 const WK_2026_COUNTRIES = [
@@ -149,8 +150,8 @@ const PlayerCard = ({ player, onDelete }: { player: WKPlayer; onDelete?: () => v
     <Card className="overflow-hidden hover:shadow-lg transition-all duration-300 group">
       <CardContent className="p-4">
         <div className="flex items-start gap-4">
-          <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center text-2xl shrink-0">
-            {player.country_flag || "⚽"}
+          <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center shrink-0">
+            <FlagImage teamName={player.country} size="md" />
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
@@ -188,7 +189,7 @@ const PlayerCard = ({ player, onDelete }: { player: WKPlayer; onDelete?: () => v
 const PlayerRow = ({ player, onDelete }: { player: WKPlayer; onDelete?: () => void }) => {
   return (
     <div className="flex items-center gap-3 p-3 border-b border-border last:border-b-0 hover:bg-secondary/30 transition-colors">
-      <span className="text-xl w-8 text-center shrink-0">{player.country_flag || "⚽"}</span>
+      <FlagImage teamName={player.country} size="sm" />
       <span className="font-medium flex-1 min-w-0 truncate">{player.name}</span>
       <Badge variant="outline" className={`${positionColor(player.position)} shrink-0`}>
         {positionIcon(player.position)}

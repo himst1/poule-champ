@@ -17,49 +17,51 @@ import { Trophy, Search, Check, Clock, Lock, User, Flag } from "lucide-react";
 import { toast } from "sonner";
 import { format, isBefore } from "date-fns";
 import { nl } from "date-fns/locale";
+import { FlagImage } from "@/components/FlagImage";
+import { COUNTRY_CODES } from "@/lib/flags";
 
-// WK 2026 participating countries with their flags
+// WK 2026 participating countries
 const WK_COUNTRIES = [
-  { name: "Argentinië", code: "ar", flag: "🇦🇷" },
-  { name: "Australië", code: "au", flag: "🇦🇺" },
-  { name: "België", code: "be", flag: "🇧🇪" },
-  { name: "Brazilië", code: "br", flag: "🇧🇷" },
-  { name: "Canada", code: "ca", flag: "🇨🇦" },
-  { name: "Chili", code: "cl", flag: "🇨🇱" },
-  { name: "Colombia", code: "co", flag: "🇨🇴" },
-  { name: "Costa Rica", code: "cr", flag: "🇨🇷" },
-  { name: "Denemarken", code: "dk", flag: "🇩🇰" },
-  { name: "Duitsland", code: "de", flag: "🇩🇪" },
-  { name: "Ecuador", code: "ec", flag: "🇪🇨" },
-  { name: "Egypte", code: "eg", flag: "🇪🇬" },
-  { name: "Engeland", code: "gb-eng", flag: "🏴󠁧󠁢󠁥󠁮󠁧󠁿" },
-  { name: "Frankrijk", code: "fr", flag: "🇫🇷" },
-  { name: "Ghana", code: "gh", flag: "🇬🇭" },
-  { name: "Iran", code: "ir", flag: "🇮🇷" },
-  { name: "Italië", code: "it", flag: "🇮🇹" },
-  { name: "Japan", code: "jp", flag: "🇯🇵" },
-  { name: "Kameroen", code: "cm", flag: "🇨🇲" },
-  { name: "Kroatië", code: "hr", flag: "🇭🇷" },
-  { name: "Marokko", code: "ma", flag: "🇲🇦" },
-  { name: "Mexico", code: "mx", flag: "🇲🇽" },
-  { name: "Nederland", code: "nl", flag: "🇳🇱" },
-  { name: "Nigeria", code: "ng", flag: "🇳🇬" },
-  { name: "Oekraïne", code: "ua", flag: "🇺🇦" },
-  { name: "Paraguay", code: "py", flag: "🇵🇾" },
-  { name: "Peru", code: "pe", flag: "🇵🇪" },
-  { name: "Polen", code: "pl", flag: "🇵🇱" },
-  { name: "Portugal", code: "pt", flag: "🇵🇹" },
-  { name: "Qatar", code: "qa", flag: "🇶🇦" },
-  { name: "Saoedi-Arabië", code: "sa", flag: "🇸🇦" },
-  { name: "Senegal", code: "sn", flag: "🇸🇳" },
-  { name: "Servië", code: "rs", flag: "🇷🇸" },
-  { name: "Spanje", code: "es", flag: "🇪🇸" },
-  { name: "Tunesië", code: "tn", flag: "🇹🇳" },
-  { name: "Uruguay", code: "uy", flag: "🇺🇾" },
-  { name: "Verenigde Staten", code: "us", flag: "🇺🇸" },
-  { name: "Wales", code: "gb-wls", flag: "🏴󠁧󠁢󠁷󠁬󠁳󠁿" },
-  { name: "Zuid-Korea", code: "kr", flag: "🇰🇷" },
-  { name: "Zwitserland", code: "ch", flag: "🇨🇭" },
+  { name: "Argentinië", code: "ar" },
+  { name: "Australië", code: "au" },
+  { name: "België", code: "be" },
+  { name: "Brazilië", code: "br" },
+  { name: "Canada", code: "ca" },
+  { name: "Chili", code: "cl" },
+  { name: "Colombia", code: "co" },
+  { name: "Costa Rica", code: "cr" },
+  { name: "Denemarken", code: "dk" },
+  { name: "Duitsland", code: "de" },
+  { name: "Ecuador", code: "ec" },
+  { name: "Egypte", code: "eg" },
+  { name: "Engeland", code: "gb-eng" },
+  { name: "Frankrijk", code: "fr" },
+  { name: "Ghana", code: "gh" },
+  { name: "Iran", code: "ir" },
+  { name: "Italië", code: "it" },
+  { name: "Japan", code: "jp" },
+  { name: "Kameroen", code: "cm" },
+  { name: "Kroatië", code: "hr" },
+  { name: "Marokko", code: "ma" },
+  { name: "Mexico", code: "mx" },
+  { name: "Nederland", code: "nl" },
+  { name: "Nigeria", code: "ng" },
+  { name: "Oekraïne", code: "ua" },
+  { name: "Paraguay", code: "py" },
+  { name: "Peru", code: "pe" },
+  { name: "Polen", code: "pl" },
+  { name: "Portugal", code: "pt" },
+  { name: "Qatar", code: "qa" },
+  { name: "Saoedi-Arabië", code: "sa" },
+  { name: "Senegal", code: "sn" },
+  { name: "Servië", code: "rs" },
+  { name: "Spanje", code: "es" },
+  { name: "Tunesië", code: "tn" },
+  { name: "Uruguay", code: "uy" },
+  { name: "Verenigde Staten", code: "us" },
+  { name: "Wales", code: "gb-wls" },
+  { name: "Zuid-Korea", code: "kr" },
+  { name: "Zwitserland", code: "ch" },
 ];
 
 interface WinnerPrediction {
@@ -167,7 +169,7 @@ const WinnerVoting = ({ pouleId, deadline }: WinnerVotingProps) => {
           .from("winner_predictions")
           .update({ 
             country: country.name,
-            country_flag: country.flag 
+            country_flag: null // We no longer store emoji flags
           })
           .eq("id", myPrediction.id);
         if (error) throw error;
@@ -178,7 +180,7 @@ const WinnerVoting = ({ pouleId, deadline }: WinnerVotingProps) => {
             user_id: user.id,
             poule_id: pouleId,
             country: country.name,
-            country_flag: country.flag,
+            country_flag: null, // We no longer store emoji flags
           });
         if (error) throw error;
       }
@@ -262,8 +264,8 @@ const WinnerVoting = ({ pouleId, deadline }: WinnerVotingProps) => {
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-4 p-3 bg-secondary/50 rounded-lg">
-              <div className="w-12 h-12 rounded-full bg-background flex items-center justify-center text-2xl">
-                {myPrediction.country_flag || "🏆"}
+              <div className="w-12 h-12 rounded-full bg-background flex items-center justify-center">
+                <FlagImage teamName={myPrediction.country} size="md" />
               </div>
               <div className="flex-1">
                 <span className="font-semibold">{myPrediction.country}</span>
@@ -311,7 +313,7 @@ const WinnerVoting = ({ pouleId, deadline }: WinnerVotingProps) => {
                 {filteredCountries.map((country) => (
                   <SelectItem key={country.code} value={country.name}>
                     <div className="flex items-center gap-2">
-                      <span>{country.flag}</span>
+                      <FlagImage teamName={country.name} size="xs" />
                       <span>{country.name}</span>
                     </div>
                   </SelectItem>
@@ -351,13 +353,10 @@ const WinnerVoting = ({ pouleId, deadline }: WinnerVotingProps) => {
               {Object.entries(predictionsByCountry)
                 .sort((a, b) => b[1].length - a[1].length)
                 .map(([countryName, predictions]) => {
-                  const countryInfo = getCountryInfo(countryName);
-                  const flag = predictions[0]?.country_flag || countryInfo?.flag || "🏳️";
-                  
                   return (
                     <div key={countryName} className="p-3 rounded-lg bg-secondary/30">
                       <div className="flex items-center gap-3 mb-2">
-                        <span className="text-xl">{flag}</span>
+                        <FlagImage teamName={countryName} size="sm" />
                         <div className="flex-1">
                           <span className="font-medium">{countryName}</span>
                         </div>
@@ -405,8 +404,6 @@ const WinnerVoting = ({ pouleId, deadline }: WinnerVotingProps) => {
                 .sort((a, b) => b[1].length - a[1].length)
                 .slice(0, 5)
                 .map(([countryName, predictions], index) => {
-                  const countryInfo = getCountryInfo(countryName);
-                  const flag = predictions[0]?.country_flag || countryInfo?.flag || "🏳️";
                   const totalVotes = allPredictions?.length || 1;
                   const percentage = Math.round((predictions.length / totalVotes) * 100);
                   
@@ -418,7 +415,7 @@ const WinnerVoting = ({ pouleId, deadline }: WinnerVotingProps) => {
                       <span className={`w-6 text-center font-bold ${index < 3 ? "text-primary" : "text-muted-foreground"}`}>
                         {index + 1}
                       </span>
-                      <span className="text-lg">{flag}</span>
+                      <FlagImage teamName={countryName} size="sm" />
                       <div className="flex-1">
                         <span className="font-medium">{countryName}</span>
                       </div>
