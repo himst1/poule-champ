@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/table";
 import { Plus, Edit, Trash2, Goal, Search, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { FlagImage } from "@/components/FlagImage";
 
 interface WKPlayer {
   id: string;
@@ -62,21 +63,21 @@ const emptyFormData: PlayerFormData = {
   goals: 0,
 };
 
-// Common WK countries with flags
+// Common WK countries
 const countries = [
-  { name: "Nederland", flag: "🇳🇱" },
-  { name: "Duitsland", flag: "🇩🇪" },
-  { name: "Frankrijk", flag: "🇫🇷" },
-  { name: "Spanje", flag: "🇪🇸" },
-  { name: "Engeland", flag: "🏴󠁧󠁢󠁥󠁮󠁧󠁿" },
-  { name: "Italië", flag: "🇮🇹" },
-  { name: "Portugal", flag: "🇵🇹" },
-  { name: "België", flag: "🇧🇪" },
-  { name: "Brazilië", flag: "🇧🇷" },
-  { name: "Argentinië", flag: "🇦🇷" },
-  { name: "Verenigde Staten", flag: "🇺🇸" },
-  { name: "Mexico", flag: "🇲🇽" },
-  { name: "Canada", flag: "🇨🇦" },
+  { name: "Nederland", code: "nl" },
+  { name: "Duitsland", code: "de" },
+  { name: "Frankrijk", code: "fr" },
+  { name: "Spanje", code: "es" },
+  { name: "Engeland", code: "gb-eng" },
+  { name: "Italië", code: "it" },
+  { name: "Portugal", code: "pt" },
+  { name: "België", code: "be" },
+  { name: "Brazilië", code: "br" },
+  { name: "Argentinië", code: "ar" },
+  { name: "Verenigde Staten", code: "us" },
+  { name: "Mexico", code: "mx" },
+  { name: "Canada", code: "ca" },
 ];
 
 const AdminWKPlayers = () => {
@@ -193,7 +194,7 @@ const AdminWKPlayers = () => {
     setFormData({
       ...formData,
       country: country.name,
-      country_flag: country.flag,
+      country_flag: "", // No longer storing emoji flags
     });
   };
 
@@ -262,8 +263,10 @@ const AdminWKPlayers = () => {
                         variant={formData.country === country.name ? "default" : "outline"}
                         size="sm"
                         onClick={() => handleCountrySelect(country)}
+                        className="gap-1"
                       >
-                        {country.flag} {country.name}
+                        <FlagImage teamName={country.name} size="xs" />
+                        {country.name}
                       </Button>
                     ))}
                   </div>
@@ -412,8 +415,10 @@ const AdminWKPlayers = () => {
                   <TableRow key={player.id}>
                     <TableCell className="font-medium">{player.name}</TableCell>
                     <TableCell>
-                      <span className="mr-2">{player.country_flag}</span>
-                      {player.country}
+                      <div className="flex items-center gap-2">
+                        <FlagImage teamName={player.country} size="xs" />
+                        {player.country}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline">{player.position}</Badge>

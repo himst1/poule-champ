@@ -17,6 +17,7 @@ import { Trophy, Goal, Search, Check, Clock, Lock, User } from "lucide-react";
 import { toast } from "sonner";
 import { format, isBefore } from "date-fns";
 import { nl } from "date-fns/locale";
+import { FlagImage } from "@/components/FlagImage";
 
 interface WKPlayer {
   id: string;
@@ -235,8 +236,8 @@ const TopscorerVoting = ({ pouleId, deadline }: TopscorerVotingProps) => {
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-4 p-3 bg-secondary/50 rounded-lg">
-              <div className="w-12 h-12 rounded-full bg-background flex items-center justify-center text-2xl">
-                {myPrediction.player.country_flag || "⚽"}
+              <div className="w-12 h-12 rounded-full bg-background flex items-center justify-center">
+                <FlagImage teamName={myPrediction.player.country} size="md" />
               </div>
               <div className="flex-1">
                 <span className="font-semibold">{myPrediction.player.name}</span>
@@ -291,7 +292,7 @@ const TopscorerVoting = ({ pouleId, deadline }: TopscorerVotingProps) => {
                 {filteredPlayers?.map((player) => (
                   <SelectItem key={player.id} value={player.id}>
                     <div className="flex items-center gap-2">
-                      <span>{player.country_flag}</span>
+                      <FlagImage teamName={player.country} size="xs" />
                       <span>{player.name}</span>
                       <span className="text-muted-foreground">({player.goals} goals)</span>
                     </div>
@@ -338,7 +339,7 @@ const TopscorerVoting = ({ pouleId, deadline }: TopscorerVotingProps) => {
                   return (
                     <div key={playerId} className="p-3 rounded-lg bg-secondary/30">
                       <div className="flex items-center gap-3 mb-2">
-                        <span className="text-xl">{player.country_flag}</span>
+                        <FlagImage teamName={player.country} size="sm" />
                         <div className="flex-1">
                           <span className="font-medium">{player.name}</span>
                           <span className="text-sm text-muted-foreground ml-2">
@@ -388,7 +389,7 @@ const TopscorerVoting = ({ pouleId, deadline }: TopscorerVotingProps) => {
                 <span className={`w-6 text-center font-bold ${index < 3 ? "text-primary" : "text-muted-foreground"}`}>
                   {index + 1}
                 </span>
-                <span className="text-lg">{player.country_flag}</span>
+                <FlagImage teamName={player.country} size="sm" />
                 <div className="flex-1">
                   <span className="font-medium">{player.name}</span>
                 </div>

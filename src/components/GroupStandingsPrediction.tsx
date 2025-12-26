@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Trophy, GripVertical, Check, Loader2, ChevronDown, ChevronUp, Info } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { FlagImage } from "@/components/FlagImage";
 
 interface GroupTeam {
   name: string;
@@ -94,7 +95,7 @@ const DraggableTeam = ({
         {index + 1}
       </div>
       <GripVertical className="w-4 h-4 text-muted-foreground" />
-      <span className="text-xl">{team.flag}</span>
+      <FlagImage teamName={team.name} size="sm" />
       <span className="font-medium flex-1 truncate">{team.name}</span>
     </div>
   );
@@ -366,7 +367,7 @@ export const GroupStandingsPrediction = ({ pouleId }: GroupStandingsPredictionPr
                   <span className="font-medium">Groep {group.name}</span>
                   <div className="flex -space-x-1">
                     {group.teams.slice(0, 4).map((team) => (
-                      <span key={team.name} className="text-lg">{team.flag}</span>
+                      <FlagImage key={team.name} teamName={team.name} size="xs" />
                     ))}
                   </div>
                 </div>
