@@ -784,14 +784,14 @@ const Players = () => {
                   </TabsTrigger>
                   {countriesWithPlayers.map((country) => {
                     const countryPlayers = players?.filter(p => p.country === country) || [];
-                    const flag = countryPlayers[0]?.country_flag || "";
                     return (
                       <TabsTrigger 
                         key={country} 
                         value={country}
-                        className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                        className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-1.5"
                       >
-                        {flag} {country} ({countryPlayers.length})
+                        <FlagImage teamName={country} size="xs" />
+                        {country} ({countryPlayers.length})
                       </TabsTrigger>
                     );
                   })}
@@ -819,7 +819,7 @@ const Players = () => {
                       {Object.entries(playersByCountry).map(([country, countryPlayers]) => (
                         <div key={country}>
                           <div className="flex items-center gap-2 mb-4">
-                            <span className="text-2xl">{countryPlayers[0]?.country_flag}</span>
+                            <FlagImage teamName={country} size="md" />
                             <h2 className="text-xl font-semibold">{country}</h2>
                             <Badge variant="secondary">{countryPlayers.length} spelers</Badge>
                           </div>
