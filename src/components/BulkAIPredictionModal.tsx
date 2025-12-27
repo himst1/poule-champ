@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Brain, Loader2, Sparkles, CheckCircle, XCircle, Play, Pause, RotateCcw } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { FlagImage } from "@/components/FlagImage";
 
 interface Match {
   id: string;
@@ -32,45 +33,6 @@ interface BulkAIPredictionModalProps {
   matches: Match[];
   onApplyPredictions?: (predictions: { matchId: string; homeScore: number; awayScore: number }[]) => void;
 }
-
-// Flag image component
-const FlagImage = ({ teamName }: { teamName: string }) => {
-  const COUNTRY_CODES: Record<string, string> = {
-    "Verenigde Staten": "us", "VS": "us", "USA": "us",
-    "Mexico": "mx", "Canada": "ca",
-    "Nederland": "nl", "Duitsland": "de", "Frankrijk": "fr", "Spanje": "es",
-    "Engeland": "gb-eng", "Italië": "it", "Portugal": "pt", "België": "be",
-    "Kroatië": "hr", "Zwitserland": "ch", "Denemarken": "dk", "Polen": "pl",
-    "Servië": "rs", "Oekraïne": "ua", "Oostenrijk": "at", "Tsjechië": "cz",
-    "Wales": "gb-wls", "Schotland": "gb-sct", "Zweden": "se", "Noorwegen": "no",
-    "Griekenland": "gr", "Turkije": "tr", "Roemenië": "ro", "Hongarije": "hu",
-    "Slowakije": "sk", "Slovenië": "si", "Finland": "fi", "Ierland": "ie",
-    "Brazilië": "br", "Argentinië": "ar", "Uruguay": "uy", "Colombia": "co",
-    "Chili": "cl", "Ecuador": "ec", "Peru": "pe", "Paraguay": "py",
-    "Venezuela": "ve", "Bolivia": "bo",
-    "Marokko": "ma", "Senegal": "sn", "Ghana": "gh", "Kameroen": "cm",
-    "Nigeria": "ng", "Tunesië": "tn", "Egypte": "eg", "Algerije": "dz",
-    "Zuid-Afrika": "za", "Ivoorkust": "ci", "Mali": "ml",
-    "Japan": "jp", "Zuid-Korea": "kr", "Australië": "au", "Saoedi-Arabië": "sa",
-    "Iran": "ir", "Qatar": "qa", "China": "cn", "Indonesië": "id",
-    "Bahrein": "bh", "Irak": "iq", "VAE": "ae", "Oman": "om", "Jordanië": "jo",
-    "Oezbekistan": "uz", "Thailand": "th", "Vietnam": "vn", "India": "in",
-    "Costa Rica": "cr", "Jamaica": "jm", "Honduras": "hn", "Panama": "pa",
-    "El Salvador": "sv", "Guatemala": "gt", "Trinidad en Tobago": "tt",
-    "Nieuw-Zeeland": "nz",
-  };
-
-  const code = COUNTRY_CODES[teamName];
-  if (!code) return null;
-
-  return (
-    <img
-      src={`https://flagcdn.com/w40/${code.toLowerCase()}.png`}
-      alt={teamName}
-      className="w-6 h-4 object-cover rounded shadow-sm"
-    />
-  );
-};
 
 export const BulkAIPredictionModal = ({
   isOpen,

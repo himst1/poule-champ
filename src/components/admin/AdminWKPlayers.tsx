@@ -272,22 +272,13 @@ const AdminWKPlayers = () => {
                   </div>
                 </div>
 
-                <div>
+                <div className="col-span-2">
                   <Label htmlFor="country">Land *</Label>
                   <Input
                     id="country"
                     value={formData.country}
                     onChange={(e) => setFormData({ ...formData, country: e.target.value })}
                     required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="country_flag">Vlag emoji</Label>
-                  <Input
-                    id="country_flag"
-                    value={formData.country_flag}
-                    onChange={(e) => setFormData({ ...formData, country_flag: e.target.value })}
-                    placeholder="🇳🇱"
                   />
                 </div>
 
