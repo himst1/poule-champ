@@ -43,10 +43,10 @@ const useGroupTeams = () => {
           groupsMap[groupName] = new Map();
         }
         if (match.home_team) {
-          groupsMap[groupName].set(match.home_team, match.home_flag || "🏳️");
+          groupsMap[groupName].set(match.home_team, match.home_team);
         }
         if (match.away_team) {
-          groupsMap[groupName].set(match.away_team, match.away_flag || "🏳️");
+          groupsMap[groupName].set(match.away_team, match.away_team);
         }
       });
 

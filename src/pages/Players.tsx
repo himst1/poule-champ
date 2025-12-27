@@ -24,49 +24,15 @@ import { toast } from "sonner";
 import { z } from "zod";
 import { FlagImage } from "@/components/FlagImage";
 
-// WK 2026 landen met vlaggen
+// WK 2026 landen (vlaggen komen uit FlagImage component)
 const WK_2026_COUNTRIES = [
-  { name: "Argentinië", flag: "🇦🇷" },
-  { name: "Australië", flag: "🇦🇺" },
-  { name: "België", flag: "🇧🇪" },
-  { name: "Brazilië", flag: "🇧🇷" },
-  { name: "Canada", flag: "🇨🇦" },
-  { name: "Chili", flag: "🇨🇱" },
-  { name: "Colombia", flag: "🇨🇴" },
-  { name: "Costa Rica", flag: "🇨🇷" },
-  { name: "Denemarken", flag: "🇩🇰" },
-  { name: "Duitsland", flag: "🇩🇪" },
-  { name: "Ecuador", flag: "🇪🇨" },
-  { name: "Engeland", flag: "🏴󠁧󠁢󠁥󠁮󠁧󠁿" },
-  { name: "Frankrijk", flag: "🇫🇷" },
-  { name: "Ghana", flag: "🇬🇭" },
-  { name: "Iran", flag: "🇮🇷" },
-  { name: "Italië", flag: "🇮🇹" },
-  { name: "Japan", flag: "🇯🇵" },
-  { name: "Kameroen", flag: "🇨🇲" },
-  { name: "Kroatië", flag: "🇭🇷" },
-  { name: "Marokko", flag: "🇲🇦" },
-  { name: "Mexico", flag: "🇲🇽" },
-  { name: "Nederland", flag: "🇳🇱" },
-  { name: "Nigeria", flag: "🇳🇬" },
-  { name: "Oekraïne", flag: "🇺🇦" },
-  { name: "Paraguay", flag: "🇵🇾" },
-  { name: "Peru", flag: "🇵🇪" },
-  { name: "Polen", flag: "🇵🇱" },
-  { name: "Portugal", flag: "🇵🇹" },
-  { name: "Qatar", flag: "🇶🇦" },
-  { name: "Saoedi-Arabië", flag: "🇸🇦" },
-  { name: "Senegal", flag: "🇸🇳" },
-  { name: "Servië", flag: "🇷🇸" },
-  { name: "Spanje", flag: "🇪🇸" },
-  { name: "Tunesië", flag: "🇹🇳" },
-  { name: "Turkije", flag: "🇹🇷" },
-  { name: "Uruguay", flag: "🇺🇾" },
-  { name: "Verenigde Staten", flag: "🇺🇸" },
-  { name: "Wales", flag: "🏴󠁧󠁢󠁷󠁬󠁳󠁿" },
-  { name: "Zuid-Korea", flag: "🇰🇷" },
-  { name: "Zweden", flag: "🇸🇪" },
-  { name: "Zwitserland", flag: "🇨🇭" },
+  "Argentinië", "Australië", "België", "Brazilië", "Canada", "Chili",
+  "Colombia", "Costa Rica", "Denemarken", "Duitsland", "Ecuador", "Engeland",
+  "Frankrijk", "Ghana", "Iran", "Italië", "Japan", "Kameroen", "Kroatië",
+  "Marokko", "Mexico", "Nederland", "Nigeria", "Oekraïne", "Paraguay", "Peru",
+  "Polen", "Portugal", "Qatar", "Saoedi-Arabië", "Senegal", "Servië", "Spanje",
+  "Tunesië", "Turkije", "Uruguay", "Verenigde Staten", "Wales", "Zuid-Korea",
+  "Zweden", "Zwitserland",
 ];
 
 // Land code mapping voor bulk import
@@ -257,11 +223,10 @@ const Players = () => {
 
   const addPlayerMutation = useMutation({
     mutationFn: async (playerData: z.infer<typeof playerSchema>) => {
-      const countryInfo = WK_2026_COUNTRIES.find(c => c.name === playerData.country);
       const { error } = await supabase.from("wk_players").insert({
         name: playerData.name,
         country: playerData.country,
-        country_flag: countryInfo?.flag || null,
+        country_flag: null, // FlagImage component handles flag display
         position: playerData.position,
         age: playerData.age,
         international_caps: playerData.international_caps,
@@ -381,9 +346,9 @@ const Players = () => {
         if (!countryName) {
           // Check if it's already a full country name
           const foundCountry = WK_2026_COUNTRIES.find(
-            c => c.name.toLowerCase() === data.land.toLowerCase()
+            c => c.toLowerCase() === data.land.toLowerCase()
           );
-          countryName = foundCountry?.name;
+          countryName = foundCountry;
         }
 
         if (!countryName) {
@@ -391,12 +356,10 @@ const Players = () => {
           return;
         }
 
-        const countryInfo = WK_2026_COUNTRIES.find(c => c.name === countryName);
-
         playersToInsert.push({
           name: data.naam,
           country: countryName,
-          country_flag: countryInfo?.flag || null,
+          country_flag: null, // FlagImage component handles flag display
           position: data.positie,
           age: data.leeftijd,
           international_caps: data.interlands,
@@ -579,8 +542,11 @@ const Players = () => {
                           </SelectTrigger>
                           <SelectContent className="max-h-[300px]">
                             {WK_2026_COUNTRIES.map((country) => (
-                              <SelectItem key={country.name} value={country.name}>
-                                {country.flag} {country.name}
+                              <SelectItem key={country} value={country}>
+                                <div className="flex items-center gap-2">
+                                  <FlagImage teamName={country} size="xs" />
+                                  <span>{country}</span>
+                                </div>
                               </SelectItem>
                             ))}
                           </SelectContent>
