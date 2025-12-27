@@ -30,22 +30,8 @@ import { PushNotificationToggle } from "@/components/PushNotificationToggle";
 import { ListOrdered } from "lucide-react";
 import { PouleAnalytics } from "@/components/PouleAnalytics";
 import { PouleChat } from "@/components/PouleChat";
-// Get all unique country names from COUNTRY_CODES (defined below)
-const ALL_COUNTRIES = [
-  "Argentinië", "Australië", "Bahrein", "België", "Bolivia", "Brazilië",
-  "Canada", "Chili", "China", "Colombia", "Costa Rica", "Denemarken",
-  "Duitsland", "Ecuador", "Egypte", "El Salvador", "Engeland", "Finland",
-  "Frankrijk", "Ghana", "Griekenland", "Guatemala", "Honduras", "Hongarije",
-  "Ierland", "India", "Indonesië", "Irak", "Iran", "Italië", "Ivoorkust",
-  "Jamaica", "Japan", "Jordanië", "Kameroen", "Kroatië", "Mali", "Marokko",
-  "Mexico", "Nederland", "Nieuw-Zeeland", "Nigeria", "Noorwegen", "Oekraïne",
-  "Oezbekistan", "Oman", "Oostenrijk", "Panama", "Paraguay", "Peru", "Polen",
-  "Portugal", "Qatar", "Roemenië", "Saoedi-Arabië", "Schotland", "Senegal",
-  "Servië", "Slovenië", "Slowakije", "Spanje", "Thailand", "Trinidad en Tobago",
-  "Tsjechië", "Tunesië", "Turkije", "Uruguay", "VAE", "Venezuela",
-  "Verenigde Staten", "Vietnam", "Wales", "Zuid-Afrika", "Zuid-Korea", "Zweden",
-  "Zwitserland"
-];
+import { FlagImage } from "@/components/FlagImage";
+import { ALL_COUNTRIES } from "@/lib/flags";
 
 // Countdown hook for upcoming matches
 const useCountdown = (targetDate: Date) => {
@@ -115,78 +101,6 @@ const CountdownTimer = ({ kickoffDate }: { kickoffDate: Date }) => {
       <Clock className="w-4 h-4" />
       <span>{minutes.toString().padStart(2, '0')}:{seconds.toString().padStart(2, '0')}</span>
     </div>
-  );
-};
-
-// Team name to ISO country code mapping for WK 2026
-const COUNTRY_CODES: Record<string, string> = {
-  // Group A - North America
-  "Verenigde Staten": "us", "VS": "us", "USA": "us",
-  "Mexico": "mx", "Canada": "ca",
-  // Europe
-  "Nederland": "nl", "Duitsland": "de", "Frankrijk": "fr", "Spanje": "es",
-  "Engeland": "gb-eng", "Italië": "it", "Portugal": "pt", "België": "be",
-  "Kroatië": "hr", "Zwitserland": "ch", "Denemarken": "dk", "Polen": "pl",
-  "Servië": "rs", "Oekraïne": "ua", "Oostenrijk": "at", "Tsjechië": "cz",
-  "Wales": "gb-wls", "Schotland": "gb-sct", "Zweden": "se", "Noorwegen": "no",
-  "Griekenland": "gr", "Turkije": "tr", "Roemenië": "ro", "Hongarije": "hu",
-  "Slowakije": "sk", "Slovenië": "si", "Finland": "fi", "Ierland": "ie",
-  // South America
-  "Brazilië": "br", "Argentinië": "ar", "Uruguay": "uy", "Colombia": "co",
-  "Chili": "cl", "Ecuador": "ec", "Peru": "pe", "Paraguay": "py",
-  "Venezuela": "ve", "Bolivia": "bo",
-  // Africa
-  "Marokko": "ma", "Senegal": "sn", "Ghana": "gh", "Kameroen": "cm",
-  "Nigeria": "ng", "Tunesië": "tn", "Egypte": "eg", "Algerije": "dz",
-  "Zuid-Afrika": "za", "Ivoorkust": "ci", "Mali": "ml",
-  // Asia
-  "Japan": "jp", "Zuid-Korea": "kr", "Australië": "au", "Saoedi-Arabië": "sa",
-  "Iran": "ir", "Qatar": "qa", "China": "cn", "Indonesië": "id",
-  "Bahrein": "bh", "Irak": "iq", "VAE": "ae", "Oman": "om", "Jordanië": "jo",
-  "Oezbekistan": "uz", "Thailand": "th", "Vietnam": "vn", "India": "in",
-  // CONCACAF
-  "Costa Rica": "cr", "Jamaica": "jm", "Honduras": "hn", "Panama": "pa",
-  "El Salvador": "sv", "Guatemala": "gt", "Trinidad en Tobago": "tt",
-  // Oceania
-  "Nieuw-Zeeland": "nz",
-};
-
-// Get flag image URL from Flagcdn
-const getFlagUrl = (teamName: string | null): string | null => {
-  if (!teamName) return null;
-  const code = COUNTRY_CODES[teamName];
-  if (!code) return null;
-  return `https://flagcdn.com/w80/${code.toLowerCase()}.png`;
-};
-
-// Flag image component
-const FlagImage = ({ teamName, size = "md" }: { teamName: string | null; size?: "sm" | "md" | "lg" }) => {
-  const flagUrl = getFlagUrl(teamName);
-  
-  const sizeClasses = {
-    sm: "w-6 h-4",
-    md: "w-10 h-7",
-    lg: "w-12 h-8",
-  };
-  
-  if (!flagUrl) {
-    return (
-      <div className={`${sizeClasses[size]} bg-secondary rounded flex items-center justify-center`}>
-        <span className="text-muted-foreground text-xs">?</span>
-      </div>
-    );
-  }
-  
-  return (
-    <img
-      src={flagUrl}
-      alt={`Vlag van ${teamName}`}
-      className={`${sizeClasses[size]} object-cover rounded shadow-sm`}
-      onError={(e) => {
-        e.currentTarget.src = "";
-        e.currentTarget.className = `${sizeClasses[size]} bg-secondary rounded`;
-      }}
-    />
   );
 };
 

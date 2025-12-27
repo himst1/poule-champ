@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { differenceInDays, differenceInHours, differenceInMinutes, differenceInSeconds, format } from "date-fns";
 import { nl } from "date-fns/locale";
+import { FlagImage } from "@/components/FlagImage";
 
 interface CountdownValues {
   days: number;
@@ -110,7 +111,12 @@ const TournamentBanner = () => {
               {firstMatch && (
                 <p className="text-sm text-muted-foreground mt-1 flex items-center gap-2">
                   <Calendar className="w-4 h-4" />
-                  Eerste wedstrijd: {firstMatch.home_team} vs {firstMatch.away_team}
+                  <span>Eerste wedstrijd:</span>
+                  <FlagImage teamName={firstMatch.home_team} size="xs" />
+                  <span>{firstMatch.home_team}</span>
+                  <span>vs</span>
+                  <FlagImage teamName={firstMatch.away_team} size="xs" />
+                  <span>{firstMatch.away_team}</span>
                 </p>
               )}
             </div>
