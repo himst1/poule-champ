@@ -35,6 +35,10 @@ export const COUNTRY_CODES: Record<string, string> = {
   // CONCACAF
   "Costa Rica": "cr", "Jamaica": "jm", "Honduras": "hn", "Panama": "pa",
   "El Salvador": "sv", "Guatemala": "gt", "Trinidad en Tobago": "tt",
+  "Curaçao": "cw", "Haïti": "ht",
+  
+  // Additional countries
+  "Kaapverdië": "cv",
 };
 
 // Get all unique country names (excluding duplicates like "VS", "USA")
