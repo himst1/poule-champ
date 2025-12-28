@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { getFlagUrl } from "@/lib/flags";
 
 interface FlagImageProps {
@@ -25,9 +26,11 @@ const sizeWidths = {
  * Handles fallback when flag is not found
  */
 export const FlagImage = ({ teamName, size = "sm", className = "" }: FlagImageProps) => {
+  const [hasError, setHasError] = useState(false);
   const flagUrl = getFlagUrl(teamName, sizeWidths[size]);
   
-  if (!flagUrl) {
+  // Show placeholder if no flag URL or if image failed to load
+  if (!flagUrl || hasError) {
     return (
       <div className={`${sizeClasses[size]} bg-secondary rounded flex items-center justify-center flex-shrink-0 ${className}`}>
         <span className="text-muted-foreground text-[10px]">?</span>
@@ -40,15 +43,7 @@ export const FlagImage = ({ teamName, size = "sm", className = "" }: FlagImagePr
       src={flagUrl}
       alt={teamName ? `Vlag van ${teamName}` : "Vlag"}
       className={`${sizeClasses[size]} object-cover rounded shadow-sm flex-shrink-0 ${className}`}
-      onError={(e) => {
-        // Hide broken image and show placeholder
-        const target = e.currentTarget;
-        target.style.display = "none";
-        const placeholder = document.createElement("div");
-        placeholder.className = `${sizeClasses[size]} bg-secondary rounded flex items-center justify-center flex-shrink-0`;
-        placeholder.innerHTML = '<span class="text-muted-foreground text-[10px]">?</span>';
-        target.parentNode?.insertBefore(placeholder, target);
-      }}
+      onError={() => setHasError(true)}
     />
   );
 };

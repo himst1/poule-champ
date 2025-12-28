@@ -41,6 +41,17 @@ export const COUNTRY_CODES: Record<string, string> = {
   "Kaapverdië": "cv",
 };
 
+// Normalize string for comparison (handles Unicode variations)
+const normalizeString = (str: string): string => {
+  return str.normalize('NFC').trim();
+};
+
+// Create a normalized lookup map for faster matching
+const normalizedCodes: Record<string, string> = {};
+Object.entries(COUNTRY_CODES).forEach(([name, code]) => {
+  normalizedCodes[normalizeString(name)] = code;
+});
+
 // Get all unique country names (excluding duplicates like "VS", "USA")
 export const ALL_COUNTRIES = Object.keys(COUNTRY_CODES).filter(
   name => !["VS", "USA"].includes(name)
@@ -54,7 +65,16 @@ export const ALL_COUNTRIES = Object.keys(COUNTRY_CODES).filter(
  */
 export const getFlagUrl = (teamName: string | null, width: number = 40): string | null => {
   if (!teamName) return null;
-  const code = COUNTRY_CODES[teamName];
+  
+  // Try direct lookup first
+  let code = COUNTRY_CODES[teamName];
+  
+  // If not found, try normalized lookup
+  if (!code) {
+    const normalized = normalizeString(teamName);
+    code = normalizedCodes[normalized];
+  }
+  
   if (!code) return null;
   return `https://flagcdn.com/w${width}/${code.toLowerCase()}.png`;
 };
@@ -66,5 +86,15 @@ export const getFlagUrl = (teamName: string | null, width: number = 40): string 
  */
 export const getCountryCode = (teamName: string | null): string | null => {
   if (!teamName) return null;
-  return COUNTRY_CODES[teamName] || null;
+  
+  // Try direct lookup first
+  let code = COUNTRY_CODES[teamName];
+  
+  // If not found, try normalized lookup
+  if (!code) {
+    const normalized = normalizeString(teamName);
+    code = normalizedCodes[normalized];
+  }
+  
+  return code || null;
 };
