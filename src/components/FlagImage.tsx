@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { getFlagUrl } from "@/lib/flags";
 import { Globe, Trophy, Shield } from "lucide-react";
 
@@ -105,6 +105,11 @@ const getConfederationStyle = (type: "fifa" | "uefa" | "caf" | "afc" | "concacaf
 export const FlagImage = ({ teamName, size = "sm", className = "" }: FlagImageProps) => {
   const [hasError, setHasError] = useState(false);
   const playoffType = getPlayoffType(teamName);
+  
+  // Reset error state when team name changes
+  useEffect(() => {
+    setHasError(false);
+  }, [teamName]);
   
   // Show confederation badge for playoff matches
   if (playoffType) {
