@@ -46,7 +46,7 @@ interface AuditLogEntry {
   performed_by: string;
   performed_at: string;
   notes: string | null;
-  profiles?: { display_name: string | null; email: string | null } | null;
+  profiles?: { display_name: string | null } | null;
 }
 
 const COUNTRIES = [
@@ -178,7 +178,7 @@ const AdminWKResults = () => {
       const userIds = [...new Set(data?.map(log => log.performed_by).filter(Boolean))];
       const { data: profiles } = await supabase
         .from("profiles")
-        .select("id, display_name, email")
+        .select("id, display_name")
         .in("id", userIds);
       
       const profileMap = new Map(profiles?.map(p => [p.id, p]));
@@ -807,7 +807,7 @@ const AdminWKResults = () => {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-medium">
-                            {log.profiles?.display_name || log.profiles?.email || "Onbekend"}
+                            {log.profiles?.display_name || "Onbekend"}
                           </span>
                           <Badge variant="outline" className="text-xs">
                             {log.action}

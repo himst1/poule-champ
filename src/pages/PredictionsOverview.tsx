@@ -38,7 +38,6 @@ import { FlagImage } from "@/components/FlagImage";
 interface Profile {
   id: string;
   display_name: string | null;
-  email: string | null;
   avatar_url: string | null;
 }
 
@@ -132,7 +131,6 @@ const PredictionsOverview = () => {
           profiles (
             id,
             display_name,
-            email,
             avatar_url
           )
         `)
@@ -223,7 +221,7 @@ const PredictionsOverview = () => {
 
   // Filter members by search
   const filteredMembers = members?.filter(member => {
-    const name = member.profiles?.display_name || member.profiles?.email || "";
+    const name = member.profiles?.display_name || "";
     return name.toLowerCase().includes(searchQuery.toLowerCase());
   });
 
@@ -373,7 +371,7 @@ const PredictionsOverview = () => {
                         {/* Name & Points */}
                         <div className="flex-1 min-w-0">
                           <p className={`font-medium truncate ${isCurrentUser ? "text-primary" : ""}`}>
-                            {member.profiles?.display_name || member.profiles?.email?.split("@")[0] || "Onbekend"}
+                            {member.profiles?.display_name || "Onbekend"}
                             {isCurrentUser && <span className="ml-2 text-xs text-primary">(jij)</span>}
                           </p>
                           <div className="flex items-center gap-3 text-sm text-muted-foreground">

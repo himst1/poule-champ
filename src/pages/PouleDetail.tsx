@@ -124,7 +124,6 @@ type Member = {
   rank: number | null;
   profiles: {
     display_name: string | null;
-    email: string | null;
     avatar_url: string | null;
   };
 };
@@ -252,7 +251,6 @@ const PouleDetail = () => {
           rank,
           profiles (
             display_name,
-            email,
             avatar_url
           )
         `)
@@ -739,7 +737,7 @@ const PouleDetail = () => {
                           </div>
                           <div className="flex-1">
                             <p className={`font-medium ${isCurrentUser ? "text-primary" : ""}`}>
-                              {member.profiles?.display_name || member.profiles?.email?.split("@")[0] || "Onbekend"}
+                              {member.profiles?.display_name || "Onbekend"}
                               {isCurrentUser && <span className="ml-2 text-xs text-primary">(jij)</span>}
                             </p>
                           </div>
