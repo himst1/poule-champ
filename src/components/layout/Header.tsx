@@ -1,10 +1,11 @@
-import { Trophy, Menu, X, LogOut, User, Settings, ChevronDown } from "lucide-react";
+import { Trophy, Menu, X, LogOut, User, Settings, ChevronDown, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import ThemeToggle from "@/components/ThemeToggle";
 import { PredictionProgress } from "@/components/PredictionProgress";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,6 +17,7 @@ const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { user, signOut, loading } = useAuth();
   const navigate = useNavigate();
+  const { data: isAdmin } = useIsAdmin();
 
   const handleSignOut = async () => {
     await signOut();
@@ -106,11 +108,20 @@ const Header = () => {
             {loading ? null : user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary/80 border border-border hover:bg-secondary transition-colors">
-                    <User className="w-4 h-4 text-muted-foreground" />
+                  <button className={`flex items-center gap-2 px-3 py-1.5 rounded-full border transition-colors ${isAdmin ? 'bg-primary/10 border-primary/50 hover:bg-primary/20' : 'bg-secondary/80 border-border hover:bg-secondary'}`}>
+                    {isAdmin ? (
+                      <Shield className="w-4 h-4 text-primary" />
+                    ) : (
+                      <User className="w-4 h-4 text-muted-foreground" />
+                    )}
                     <span className="text-sm font-medium max-w-[120px] truncate">
                       {user.user_metadata?.display_name || user.email?.split("@")[0]}
                     </span>
+                    {isAdmin && (
+                      <span className="text-xs font-semibold text-primary bg-primary/20 px-1.5 py-0.5 rounded">
+                        Admin
+                      </span>
+                    )}
                     <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
                   </button>
                 </DropdownMenuTrigger>
@@ -236,9 +247,18 @@ const Header = () => {
               
               {user ? (
                 <div className="space-y-2 px-2">
-                  <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-secondary/50">
-                    <User className="w-4 h-4 text-muted-foreground" />
+                  <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${isAdmin ? 'bg-primary/10 border border-primary/30' : 'bg-secondary/50'}`}>
+                    {isAdmin ? (
+                      <Shield className="w-4 h-4 text-primary" />
+                    ) : (
+                      <User className="w-4 h-4 text-muted-foreground" />
+                    )}
                     <span className="text-sm font-medium">{user.user_metadata?.display_name || user.email?.split("@")[0]}</span>
+                    {isAdmin && (
+                      <span className="text-xs font-semibold text-primary bg-primary/20 px-1.5 py-0.5 rounded ml-auto">
+                        Admin
+                      </span>
+                    )}
                   </div>
                   <Button 
                     variant="ghost" 
