@@ -39,6 +39,19 @@ export const COUNTRY_CODES: Record<string, string> = {
   
   // Additional countries
   "Kaapverdië": "cv",
+  
+  // English team names (for database entries that may use English names)
+  "Netherlands": "nl", "Germany": "de", "France": "fr", "Spain": "es",
+  "England": "gb-eng", "Italy": "it", "Belgium": "be", "Croatia": "hr",
+  "Switzerland": "ch", "Denmark": "dk", "Poland": "pl", "Serbia": "rs",
+  "Ukraine": "ua", "Austria": "at", "Czech Republic": "cz", "Czechia": "cz",
+  "Sweden": "se", "Norway": "no", "Greece": "gr", "Romania": "ro",
+  "Hungary": "hu", "Slovakia": "sk", "Slovenia": "si",
+  "Brazil": "br", "Argentina": "ar", "Morocco": "ma",
+  "Cameroon": "cm", "Tunisia": "tn", "Egypt": "eg", "Algeria": "dz",
+  "South Africa": "za", "Ivory Coast": "ci", "South Korea": "kr",
+  "Korea Republic": "kr", "Australia": "au", "Saudi Arabia": "sa",
+  "New Zealand": "nz", "United States": "us",
 };
 
 // Normalize string for comparison (handles Unicode variations)
