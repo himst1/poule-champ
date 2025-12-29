@@ -29,12 +29,27 @@ const iconSizes = {
   lg: 22,
 };
 
-// Detect if team name is a playoff placeholder
-const getPlayoffType = (teamName: string | null): "fifa" | "uefa" | "caf" | "afc" | "concacaf" | "conmebol" | "ofc" | null => {
+// Detect if team name is a playoff/knockout placeholder
+const getPlayoffType = (teamName: string | null): "fifa" | "uefa" | "caf" | "afc" | "concacaf" | "conmebol" | "ofc" | "knockout" | null => {
   if (!teamName) return null;
   const lower = teamName.toLowerCase();
   
-  if (lower.includes("play-off fifa") || lower.includes("playoff fifa") || lower === "tbd" || lower === "nader te bepalen") {
+  // Knockout stage placeholders (e.g., "Winnaar A", "Tweede B", "1A", "2B", etc.)
+  if (
+    lower.startsWith("winnaar ") ||
+    lower.startsWith("tweede ") ||
+    lower.startsWith("winner ") ||
+    lower.startsWith("runner-up ") ||
+    lower.startsWith("1") ||
+    lower.startsWith("2") ||
+    lower.startsWith("3") ||
+    lower === "tbd" ||
+    lower === "nader te bepalen"
+  ) {
+    return "knockout";
+  }
+  
+  if (lower.includes("play-off fifa") || lower.includes("playoff fifa")) {
     return "fifa";
   }
   if (lower.includes("play-off uefa") || lower.includes("playoff uefa")) {
@@ -59,9 +74,11 @@ const getPlayoffType = (teamName: string | null): "fifa" | "uefa" | "caf" | "afc
   return null;
 };
 
-// Get colors for confederation badges
-const getConfederationStyle = (type: "fifa" | "uefa" | "caf" | "afc" | "concacaf" | "conmebol" | "ofc") => {
+// Get colors for confederation/knockout badges
+const getConfederationStyle = (type: "fifa" | "uefa" | "caf" | "afc" | "concacaf" | "conmebol" | "ofc" | "knockout") => {
   switch (type) {
+    case "knockout":
+      return { bg: "bg-orange-500/20", text: "text-orange-400", border: "border-orange-500/30" };
     case "fifa":
       return { bg: "bg-blue-500/20", text: "text-blue-400", border: "border-blue-500/30" };
     case "uefa":
@@ -99,7 +116,9 @@ export const FlagImage = ({ teamName, size = "sm", className = "" }: FlagImagePr
         className={`${sizeClasses[size]} ${style.bg} ${style.border} border rounded flex items-center justify-center flex-shrink-0 ${className}`}
         title={teamName || undefined}
       >
-        {playoffType === "fifa" ? (
+        {playoffType === "knockout" ? (
+          <Trophy className={style.text} size={iconSize} strokeWidth={2} />
+        ) : playoffType === "fifa" ? (
           <Globe className={style.text} size={iconSize} strokeWidth={2} />
         ) : playoffType === "uefa" ? (
           <Shield className={style.text} size={iconSize} strokeWidth={2} />
