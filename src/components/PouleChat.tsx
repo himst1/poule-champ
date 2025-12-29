@@ -17,7 +17,6 @@ interface ChatMessage {
   user_id: string;
   profiles: {
     display_name: string | null;
-    email: string | null;
     avatar_url: string | null;
   } | null;
 }
@@ -49,7 +48,6 @@ export const PouleChat = ({ pouleId, pouleName }: PouleChatProps) => {
           user_id,
           profiles (
             display_name,
-            email,
             avatar_url
           )
         `)
@@ -199,7 +197,6 @@ export const PouleChat = ({ pouleId, pouleName }: PouleChatProps) => {
               const isOwn = message.user_id === user?.id;
               const senderName =
                 message.profiles?.display_name ||
-                message.profiles?.email?.split("@")[0] ||
                 "Onbekend";
 
               return (

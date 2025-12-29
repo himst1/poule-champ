@@ -49,7 +49,6 @@ interface PouleManagementProps {
     rank: number | null;
     profiles: {
       display_name: string | null;
-      email: string | null;
     };
   }>;
   currentUserId?: string;
@@ -329,7 +328,6 @@ export const PouleManagement = ({
             <div className="divide-y divide-border max-h-60 overflow-y-auto">
               {members.map((member) => {
                 const displayName = member.profiles?.display_name || 
-                  member.profiles?.email?.split("@")[0] || 
                   "Onbekend";
                 const isCurrentUser = member.user_id === currentUserId;
 

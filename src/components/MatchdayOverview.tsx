@@ -34,7 +34,6 @@ type Member = {
   rank: number | null;
   profiles: {
     display_name: string | null;
-    email: string | null;
     avatar_url: string | null;
   };
 };
@@ -203,7 +202,7 @@ export const MatchdayOverview = ({
       // Build standings for this matchday
       const standings: MatchdayStanding[] = members.map(member => ({
         userId: member.user_id,
-        displayName: member.profiles.display_name || member.profiles.email?.split("@")[0] || "Anoniem",
+        displayName: member.profiles.display_name || "Anoniem",
         avatarUrl: member.profiles.avatar_url,
         matchdayPoints: matchdayStats[member.user_id]?.points || 0,
         cumulativePoints: cumulativePoints[member.user_id] || 0,

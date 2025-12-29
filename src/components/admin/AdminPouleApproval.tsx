@@ -38,7 +38,7 @@ interface Poule {
   status: "open" | "closed" | "finished";
   created_at: string;
   creator_id: string;
-  profiles?: { display_name: string | null; email: string | null };
+  profiles?: { display_name: string | null };
   member_count?: number;
 }
 
@@ -57,7 +57,7 @@ const AdminPouleApproval = () => {
         .from("poules")
         .select(`
           *,
-          profiles:creator_id (display_name, email)
+          profiles:creator_id (display_name)
         `)
         .order("created_at", { ascending: false });
 
@@ -120,8 +120,7 @@ const AdminPouleApproval = () => {
   const filteredPoules = poules?.filter(
     (poule) =>
       poule.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      poule.profiles?.display_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      poule.profiles?.email?.toLowerCase().includes(searchQuery.toLowerCase())
+      poule.profiles?.display_name?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const pendingCount = poules?.filter((p) => p.approval_status === "pending").length || 0;
@@ -243,7 +242,6 @@ const AdminPouleApproval = () => {
                     <TableCell>
                       <div>
                         <p className="font-medium">{poule.profiles?.display_name || "Onbekend"}</p>
-                        <p className="text-sm text-muted-foreground">{poule.profiles?.email}</p>
                       </div>
                     </TableCell>
                     <TableCell>

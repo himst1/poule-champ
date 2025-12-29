@@ -50,7 +50,7 @@ interface AllTimeStats {
   tournament_wins: number;
   podium_finishes: number;
   avg_points_per_tournament: number;
-  profiles?: { display_name: string | null; email: string | null } | null;
+  profiles?: { display_name: string | null } | null;
 }
 
 interface UserRecord {
@@ -106,7 +106,7 @@ const AdminAnalytics = () => {
       const userIds = data?.map(s => s.user_id) || [];
       const { data: profiles } = await supabase
         .from("profiles")
-        .select("id, display_name, email")
+        .select("id, display_name")
         .in("id", userIds);
       
       const profileMap = new Map(profiles?.map(p => [p.id, p]));
@@ -177,7 +177,7 @@ const AdminAnalytics = () => {
       const userIds = [...new Set(data?.map(m => m.user_id))];
       const { data: profiles } = await supabase
         .from("profiles")
-        .select("id, display_name, email")
+        .select("id, display_name")
         .in("id", userIds);
       
       const profileMap = new Map(profiles?.map(p => [p.id, p]));
@@ -187,7 +187,7 @@ const AdminAnalytics = () => {
       data?.forEach(member => {
         const userId = member.user_id;
         const profile = profileMap.get(userId);
-        const name = profile?.display_name || profile?.email || "Onbekend";
+        const name = profile?.display_name || "Onbekend";
         if (!userPoints[userId]) {
           userPoints[userId] = { points: 0, name };
         }
@@ -208,7 +208,7 @@ const AdminAnalytics = () => {
     if (highestPoints) {
       records.push({
         userId: highestPoints.user_id,
-        userName: highestPoints.profiles?.display_name || highestPoints.profiles?.email || "Onbekend",
+        userName: highestPoints.profiles?.display_name || "Onbekend",
         value: highestPoints.total_points,
         description: "Meeste totale punten",
       });
@@ -219,7 +219,7 @@ const AdminAnalytics = () => {
     if (mostWins && mostWins.tournament_wins > 0) {
       records.push({
         userId: mostWins.user_id,
-        userName: mostWins.profiles?.display_name || mostWins.profiles?.email || "Onbekend",
+        userName: mostWins.profiles?.display_name || "Onbekend",
         value: mostWins.tournament_wins,
         description: "Meeste toernooi overwinningen",
       });
@@ -230,7 +230,7 @@ const AdminAnalytics = () => {
     if (mostCorrectScores && mostCorrectScores.correct_scores > 0) {
       records.push({
         userId: mostCorrectScores.user_id,
-        userName: mostCorrectScores.profiles?.display_name || mostCorrectScores.profiles?.email || "Onbekend",
+        userName: mostCorrectScores.profiles?.display_name || "Onbekend",
         value: mostCorrectScores.correct_scores,
         description: "Meeste exacte voorspellingen",
       });
@@ -243,7 +243,7 @@ const AdminAnalytics = () => {
     if (bestAverage) {
       records.push({
         userId: bestAverage.user_id,
-        userName: bestAverage.profiles?.display_name || bestAverage.profiles?.email || "Onbekend",
+        userName: bestAverage.profiles?.display_name || "Onbekend",
         value: Math.round(bestAverage.avg_points_per_tournament),
         description: "Hoogste gemiddelde per toernooi",
       });
@@ -885,7 +885,7 @@ const AdminAnalytics = () => {
                       {index > 2 && index + 1}
                     </TableCell>
                     <TableCell className="font-medium">
-                      {stats.profiles?.display_name || stats.profiles?.email || "Onbekend"}
+                      {stats.profiles?.display_name || "Onbekend"}
                     </TableCell>
                     <TableCell className="text-right font-bold text-primary">
                       {stats.total_points}
