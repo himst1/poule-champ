@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.send-deadline-notifications]
 verify_jwt = false
+
+[functions.fetch-player-images]
+verify_jwt = false
