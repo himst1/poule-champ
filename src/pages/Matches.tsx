@@ -7,7 +7,7 @@ import Footer from "@/components/layout/Footer";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Calendar, Filter, Trophy, Clock, Check, X, LogIn, Loader2, Bell, BellOff, Star, StarOff, Brain, Save, Users } from "lucide-react";
+import { Calendar, Filter, Trophy, Clock, Check, X, LogIn, Loader2, Bell, BellOff, Star, StarOff, Brain, Save, Users, Search } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format, parseISO, isBefore, differenceInSeconds, differenceInMinutes, addMinutes } from "date-fns";
 import { nl } from "date-fns/locale";
@@ -125,6 +125,7 @@ const PHASES = [
 const Matches = () => {
   const [selectedPhase, setSelectedPhase] = useState("Alle fases");
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const [favoriteCountries, setFavoriteCountries] = useState<string[]>(() => {
     const saved = localStorage.getItem("favoriteCountries");
     return saved ? JSON.parse(saved) : [];
@@ -376,16 +377,22 @@ const Matches = () => {
       const phaseMatch = selectedPhase === "Alle fases" || match.phase === selectedPhase;
       const dateMatch = !selectedDate || matchDate === selectedDate;
       
-      // Favorite countries filter
+      // Search filter - match team names, stadium, or city
+      const searchLower = searchQuery.toLowerCase().trim();
+      const searchMatch = !searchLower || 
+        match.home_team.toLowerCase().includes(searchLower) ||
+        match.away_team.toLowerCase().includes(searchLower) ||
+        (match.stadium && match.stadium.toLowerCase().includes(searchLower)) ||
+        (match.city && match.city.toLowerCase().includes(searchLower));
+      
       // Favorite countries filter - when favorites are selected AND showOnlyFavorites is true
-      // OR when favorites are selected (auto-filter when you have favorites)
       const favoriteMatch = favoriteCountries.length === 0 || !showOnlyFavorites || 
         favoriteCountries.includes(match.home_team) || 
         favoriteCountries.includes(match.away_team);
       
-      return phaseMatch && dateMatch && favoriteMatch;
+      return phaseMatch && dateMatch && searchMatch && favoriteMatch;
     });
-  }, [matches, selectedPhase, selectedDate, showOnlyFavorites, favoriteCountries]);
+  }, [matches, selectedPhase, selectedDate, searchQuery, showOnlyFavorites, favoriteCountries]);
 
   // Get predictable matches (pending matches that haven't started yet)
   const predictableMatches = useMemo(() => {
@@ -676,6 +683,32 @@ const Matches = () => {
           {/* Filters */}
           <div className="glass-card rounded-2xl p-6 mb-8">
             <div className="flex flex-col gap-6">
+              {/* Search Bar */}
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <Search className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm font-medium text-muted-foreground">Zoek wedstrijden</span>
+                </div>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    type="text"
+                    placeholder="Zoek op land, stad of stadion..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10 bg-secondary border-border"
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery("")}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
               {/* Phase Filter */}
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-3">
@@ -836,7 +869,7 @@ const Matches = () => {
                 </span>
               )}
             </p>
-            {(selectedPhase !== "Alle fases" || selectedDate || showOnlyFavorites) && (
+            {(selectedPhase !== "Alle fases" || selectedDate || showOnlyFavorites || searchQuery) && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -844,6 +877,7 @@ const Matches = () => {
                   setSelectedPhase("Alle fases");
                   setSelectedDate(null);
                   setShowOnlyFavorites(false);
+                  setSearchQuery("");
                 }}
               >
                 Filters wissen
