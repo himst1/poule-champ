@@ -71,7 +71,6 @@ interface TopscorerPrediction {
     id: string;
     name: string;
     country: string;
-    country_flag: string | null;
     goals: number;
   };
 }
@@ -80,7 +79,6 @@ interface WinnerPrediction {
   id: string;
   user_id: string;
   country: string;
-  country_flag: string | null;
   points_earned: number;
 }
 

@@ -196,11 +196,11 @@ const AdminWKResults = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("matches")
-        .select("home_team, away_team, home_flag, away_flag, phase")
+        .select("home_team, away_team, phase")
         .not("phase", "is", null);
       if (error) throw error;
       
-      const teamsByGroup: Record<string, { name: string; flag: string }[]> = {};
+      const teamsByGroup: Record<string, { name: string }[]> = {};
       
       data?.forEach(match => {
         const phase = match.phase;
@@ -208,14 +208,14 @@ const AdminWKResults = () => {
           const group = phase.replace("Groep ", "");
           if (!teamsByGroup[group]) teamsByGroup[group] = [];
           
-          const addTeam = (name: string, flag: string | null) => {
+          const addTeam = (name: string) => {
             if (!teamsByGroup[group].find(t => t.name === name)) {
-              teamsByGroup[group].push({ name, flag: flag || "" });
+              teamsByGroup[group].push({ name });
             }
           };
           
-          addTeam(match.home_team, match.home_flag);
-          addTeam(match.away_team, match.away_flag);
+          addTeam(match.home_team);
+          addTeam(match.away_team);
         }
       });
       

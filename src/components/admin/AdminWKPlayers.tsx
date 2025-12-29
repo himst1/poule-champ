@@ -36,7 +36,6 @@ interface WKPlayer {
   id: string;
   name: string;
   country: string;
-  country_flag: string | null;
   position: string;
   age: number;
   international_caps: number;
@@ -47,7 +46,6 @@ interface WKPlayer {
 interface PlayerFormData {
   name: string;
   country: string;
-  country_flag: string;
   position: string;
   age: number;
   international_caps: number;
@@ -57,7 +55,6 @@ interface PlayerFormData {
 const emptyFormData: PlayerFormData = {
   name: "",
   country: "",
-  country_flag: "",
   position: "Aanvaller",
   age: 25,
   international_caps: 0,
@@ -108,7 +105,6 @@ const AdminWKPlayers = () => {
       const { error } = await supabase.from("wk_players").insert({
         name: data.name,
         country: data.country,
-        country_flag: data.country_flag || null,
         position: data.position,
         age: data.age,
         international_caps: data.international_caps,
@@ -135,7 +131,6 @@ const AdminWKPlayers = () => {
         .update({
           name: data.name,
           country: data.country,
-          country_flag: data.country_flag || null,
           position: data.position,
           age: data.age,
           international_caps: data.international_caps,
@@ -183,7 +178,6 @@ const AdminWKPlayers = () => {
     setFormData({
       name: player.name,
       country: player.country,
-      country_flag: player.country_flag || "",
       position: player.position,
       age: player.age,
       international_caps: player.international_caps,
@@ -196,7 +190,6 @@ const AdminWKPlayers = () => {
     setFormData({
       ...formData,
       country: country.name,
-      country_flag: "", // No longer storing emoji flags
     });
   };
 

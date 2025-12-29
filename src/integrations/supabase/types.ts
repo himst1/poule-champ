@@ -141,13 +141,11 @@ export type Database = {
       }
       matches: {
         Row: {
-          away_flag: string | null
           away_score: number | null
           away_team: string
           city: string | null
           created_at: string
           external_id: number | null
-          home_flag: string | null
           home_score: number | null
           home_team: string
           id: string
@@ -160,13 +158,11 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          away_flag?: string | null
           away_score?: number | null
           away_team: string
           city?: string | null
           created_at?: string
           external_id?: number | null
-          home_flag?: string | null
           home_score?: number | null
           home_team: string
           id?: string
@@ -179,13 +175,11 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          away_flag?: string | null
           away_score?: number | null
           away_team?: string
           city?: string | null
           created_at?: string
           external_id?: number | null
-          home_flag?: string | null
           home_score?: number | null
           home_team?: string
           id?: string
@@ -248,7 +242,6 @@ export type Database = {
         Row: {
           club: string | null
           country: string
-          country_flag: string | null
           created_at: string
           date_of_birth: string | null
           goals: number
@@ -262,7 +255,6 @@ export type Database = {
         Insert: {
           club?: string | null
           country: string
-          country_flag?: string | null
           created_at?: string
           date_of_birth?: string | null
           goals?: number
@@ -276,7 +268,6 @@ export type Database = {
         Update: {
           club?: string | null
           country?: string
-          country_flag?: string | null
           created_at?: string
           date_of_birth?: string | null
           goals?: number
@@ -796,7 +787,6 @@ export type Database = {
       winner_predictions: {
         Row: {
           country: string
-          country_flag: string | null
           created_at: string
           id: string
           points_earned: number
@@ -806,7 +796,6 @@ export type Database = {
         }
         Insert: {
           country: string
-          country_flag?: string | null
           created_at?: string
           id?: string
           points_earned?: number
@@ -816,7 +805,6 @@ export type Database = {
         }
         Update: {
           country?: string
-          country_flag?: string | null
           created_at?: string
           id?: string
           points_earned?: number
@@ -838,7 +826,6 @@ export type Database = {
         Row: {
           age: number
           country: string
-          country_flag: string | null
           created_at: string
           goals: number
           id: string
@@ -851,7 +838,6 @@ export type Database = {
         Insert: {
           age: number
           country: string
-          country_flag?: string | null
           created_at?: string
           goals?: number
           id?: string
@@ -864,7 +850,6 @@ export type Database = {
         Update: {
           age?: number
           country?: string
-          country_flag?: string | null
           created_at?: string
           goals?: number
           id?: string

@@ -40,7 +40,6 @@ interface Player {
   id: string;
   name: string;
   country: string;
-  country_flag: string | null;
   position: string;
   date_of_birth: string | null;
   goals: number;
@@ -51,7 +50,6 @@ interface Player {
 interface PlayerFormData {
   name: string;
   country: string;
-  country_flag: string;
   position: string;
   date_of_birth: string;
   goals: number;
@@ -62,7 +60,6 @@ interface PlayerFormData {
 const emptyFormData: PlayerFormData = {
   name: "",
   country: "",
-  country_flag: "",
   position: "Aanvaller",
   date_of_birth: "",
   goals: 0,
@@ -109,7 +106,6 @@ const AdminPlayers = () => {
       const { error } = await supabase.from("players").insert({
         name: data.name,
         country: data.country,
-        country_flag: data.country_flag || null,
         position: data.position,
         date_of_birth: data.date_of_birth || null,
         goals: data.goals,
@@ -137,7 +133,6 @@ const AdminPlayers = () => {
         .update({
           name: data.name,
           country: data.country,
-          country_flag: data.country_flag || null,
           position: data.position,
           date_of_birth: data.date_of_birth || null,
           goals: data.goals,
@@ -186,7 +181,6 @@ const AdminPlayers = () => {
     setFormData({
       name: player.name,
       country: player.country,
-      country_flag: player.country_flag || "",
       position: player.position,
       date_of_birth: player.date_of_birth || "",
       goals: player.goals,

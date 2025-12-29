@@ -74,7 +74,6 @@ interface WKPlayer {
   id: string;
   name: string;
   country: string;
-  country_flag: string | null;
   position: string;
   age: number;
   international_caps: number;
