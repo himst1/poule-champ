@@ -28,10 +28,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Edit, Trash2, Goal, Search, Loader2 } from "lucide-react";
+import { Plus, Edit, Trash2, Goal, Search, Loader2, Image, User } from "lucide-react";
 import { toast } from "sonner";
 import { FlagImage } from "@/components/FlagImage";
-
+import { fetchAndUpdatePlayerImages } from "@/lib/api/player-images";
 interface WKPlayer {
   id: string;
   name: string;
@@ -41,6 +41,7 @@ interface WKPlayer {
   age: number;
   international_caps: number;
   goals: number;
+  image_url: string | null;
 }
 
 interface PlayerFormData {
@@ -87,6 +88,7 @@ const AdminWKPlayers = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingPlayer, setEditingPlayer] = useState<WKPlayer | null>(null);
   const [formData, setFormData] = useState<PlayerFormData>(emptyFormData);
+  const [isFetchingImages, setIsFetchingImages] = useState(false);
 
   const { data: players, isLoading } = useQuery({
     queryKey: ["admin-wk-players"],
@@ -217,6 +219,47 @@ const AdminWKPlayers = () => {
 
   const uniqueCountries = [...new Set(players?.map((p) => p.country) || [])].sort();
 
+  // Filter players for a specific country that don't have images
+  const getPlayersWithoutImages = (country: string) => {
+    return players?.filter((p) => p.country === country && !p.image_url) || [];
+  };
+
+  // Handle fetching images for a country
+  const handleFetchImagesForCountry = async (country: string) => {
+    const playersToFetch = getPlayersWithoutImages(country);
+    
+    if (playersToFetch.length === 0) {
+      toast.info(`Alle spelers van ${country} hebben al een foto`);
+      return;
+    }
+
+    setIsFetchingImages(true);
+    toast.info(`Foto's ophalen voor ${playersToFetch.length} spelers van ${country}...`);
+
+    try {
+      const result = await fetchAndUpdatePlayerImages(
+        playersToFetch.map((p) => ({
+          id: p.id,
+          name: p.name,
+          country: p.country,
+        }))
+      );
+
+      if (result.success) {
+        toast.success(`${result.updated} foto's opgehaald voor ${country}`);
+        queryClient.invalidateQueries({ queryKey: ["admin-wk-players"] });
+        queryClient.invalidateQueries({ queryKey: ["wk-players-for-voting"] });
+      } else {
+        toast.error(`Fout bij ophalen foto's: ${result.errors.join(", ")}`);
+      }
+    } catch (error) {
+      console.error("Error fetching images:", error);
+      toast.error("Fout bij ophalen van foto's");
+    } finally {
+      setIsFetchingImages(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -227,13 +270,26 @@ const AdminWKPlayers = () => {
             {players?.length || 0} spelers uit {uniqueCountries.length} landen
           </p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={handleOpenCreate}>
-              <Plus className="w-4 h-4 mr-2" />
-              Speler toevoegen
-            </Button>
-          </DialogTrigger>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => handleFetchImagesForCountry("Nederland")}
+            disabled={isFetchingImages}
+          >
+            {isFetchingImages ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <Image className="w-4 h-4 mr-2" />
+            )}
+            Foto's NL ophalen
+          </Button>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={handleOpenCreate}>
+                <Plus className="w-4 h-4 mr-2" />
+                Speler toevoegen
+              </Button>
+            </DialogTrigger>
           <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle>
@@ -345,6 +401,7 @@ const AdminWKPlayers = () => {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {/* Filters */}
@@ -379,6 +436,7 @@ const AdminWKPlayers = () => {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Foto</TableHead>
                 <TableHead>Speler</TableHead>
                 <TableHead>Land</TableHead>
                 <TableHead>Positie</TableHead>
@@ -391,19 +449,32 @@ const AdminWKPlayers = () => {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8">
+                  <TableCell colSpan={8} className="text-center py-8">
                     <Loader2 className="w-6 h-6 animate-spin mx-auto" />
                   </TableCell>
                 </TableRow>
               ) : filteredPlayers?.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                     Geen spelers gevonden
                   </TableCell>
                 </TableRow>
               ) : (
                 filteredPlayers?.map((player) => (
                   <TableRow key={player.id}>
+                    <TableCell>
+                      <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center overflow-hidden">
+                        {player.image_url ? (
+                          <img 
+                            src={player.image_url} 
+                            alt={player.name} 
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <User className="w-5 h-5 text-muted-foreground" />
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell className="font-medium">{player.name}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">

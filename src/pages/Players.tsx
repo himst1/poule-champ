@@ -79,6 +79,7 @@ interface WKPlayer {
   age: number;
   international_caps: number;
   goals: number;
+  image_url: string | null;
 }
 
 const positionIcon = (position: string) => {
@@ -116,12 +117,25 @@ const PlayerCard = ({ player, onDelete }: { player: WKPlayer; onDelete?: () => v
     <Card className="overflow-hidden hover:shadow-lg transition-all duration-300 group">
       <CardContent className="p-4">
         <div className="flex items-start gap-4">
-          <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center shrink-0">
-            <FlagImage teamName={player.country} size="md" />
+          <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center shrink-0 overflow-hidden">
+            {player.image_url ? (
+              <img 
+                src={player.image_url} 
+                alt={player.name} 
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                  e.currentTarget.parentElement?.classList.add('fallback-active');
+                }}
+              />
+            ) : (
+              <User className="w-6 h-6 text-muted-foreground" />
+            )}
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
               <h3 className="font-semibold text-foreground truncate">{player.name}</h3>
+              <FlagImage teamName={player.country} size="xs" />
             </div>
             <div className="flex items-center gap-2 flex-wrap">
               <Badge variant="outline" className={positionColor(player.position)}>
@@ -155,6 +169,20 @@ const PlayerCard = ({ player, onDelete }: { player: WKPlayer; onDelete?: () => v
 const PlayerRow = ({ player, onDelete }: { player: WKPlayer; onDelete?: () => void }) => {
   return (
     <div className="flex items-center gap-3 p-3 border-b border-border last:border-b-0 hover:bg-secondary/30 transition-colors">
+      <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center shrink-0 overflow-hidden">
+        {player.image_url ? (
+          <img 
+            src={player.image_url} 
+            alt={player.name} 
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              e.currentTarget.style.display = 'none';
+            }}
+          />
+        ) : (
+          <User className="w-4 h-4 text-muted-foreground" />
+        )}
+      </div>
       <FlagImage teamName={player.country} size="sm" />
       <span className="font-medium flex-1 min-w-0 truncate">{player.name}</span>
       <Badge variant="outline" className={`${positionColor(player.position)} shrink-0`}>

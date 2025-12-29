@@ -842,6 +842,7 @@ export type Database = {
           created_at: string
           goals: number
           id: string
+          image_url: string | null
           international_caps: number
           name: string
           position: string
@@ -854,6 +855,7 @@ export type Database = {
           created_at?: string
           goals?: number
           id?: string
+          image_url?: string | null
           international_caps?: number
           name: string
           position: string
@@ -866,6 +868,7 @@ export type Database = {
           created_at?: string
           goals?: number
           id?: string
+          image_url?: string | null
           international_caps?: number
           name?: string
           position?: string
