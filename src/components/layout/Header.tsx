@@ -127,6 +127,12 @@ const Header = () => {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
                   <DropdownMenuItem asChild>
+                    <a href="/profiel" className="cursor-pointer flex items-center gap-2">
+                      <Settings className="w-4 h-4" />
+                      Profiel
+                    </a>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
                     <a href="/dashboard" className="cursor-pointer flex items-center gap-2">
                       <User className="w-4 h-4" />
                       Mijn Dashboard
@@ -260,6 +266,14 @@ const Header = () => {
                       </span>
                     )}
                   </div>
+                  <a 
+                    href="/profiel"
+                    className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 rounded-lg transition-all"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    <Settings className="w-4 h-4" />
+                    Profiel
+                  </a>
                   <Button 
                     variant="ghost" 
                     className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10" 
