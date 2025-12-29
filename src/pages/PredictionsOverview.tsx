@@ -32,6 +32,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { PredictionComments } from "@/components/PredictionComments";
+import { FlagImage } from "@/components/FlagImage";
 
 // Types
 interface Profile {
@@ -411,7 +412,7 @@ const PredictionsOverview = () => {
                           </div>
                           {topscorerPred?.player ? (
                             <div className="flex items-center gap-3">
-                              <span className="text-xl">{topscorerPred.player.country_flag}</span>
+                              <FlagImage teamName={topscorerPred.player.country} size="md" />
                               <div>
                                 <p className="font-medium">{topscorerPred.player.name}</p>
                                 <p className="text-sm text-muted-foreground">
@@ -435,7 +436,7 @@ const PredictionsOverview = () => {
                           </div>
                           {winnerPred ? (
                             <div className="flex items-center gap-3">
-                              <span className="text-xl">{winnerPred.country_flag}</span>
+                              <FlagImage teamName={winnerPred.country} size="md" />
                               <div>
                                 <p className="font-medium">{winnerPred.country}</p>
                               </div>

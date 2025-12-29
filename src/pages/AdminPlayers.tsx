@@ -34,6 +34,7 @@ import {
 import { Plus, Edit, Trash2, Goal, Search, Shield, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { FlagImage } from "@/components/FlagImage";
 
 interface Player {
   id: string;
@@ -316,15 +317,13 @@ const AdminPlayers = () => {
                       />
                     </div>
                     <div>
-                      <Label htmlFor="country_flag">Vlag emoji</Label>
-                      <Input
-                        id="country_flag"
-                        value={formData.country_flag}
-                        onChange={(e) =>
-                          setFormData({ ...formData, country_flag: e.target.value })
-                        }
-                        placeholder="🇳🇱"
-                      />
+                      <Label>Vlag preview</Label>
+                      <div className="flex items-center gap-2 h-10 px-3 rounded-md border bg-muted/50">
+                        <FlagImage teamName={formData.country} size="sm" />
+                        <span className="text-sm text-muted-foreground">
+                          {formData.country ? `Vlag voor ${formData.country}` : "Selecteer een land"}
+                        </span>
+                      </div>
                     </div>
                     <div>
                       <Label htmlFor="position">Positie *</Label>
@@ -468,8 +467,10 @@ const AdminPlayers = () => {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <span className="mr-2">{player.country_flag}</span>
-                          {player.country}
+                          <div className="flex items-center gap-2">
+                            <FlagImage teamName={player.country} size="sm" />
+                            {player.country}
+                          </div>
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline">{player.position}</Badge>
