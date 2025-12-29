@@ -102,7 +102,6 @@ const getConfederationStyle = (type: "fifa" | "uefa" | "caf" | "afc" | "concacaf
  */
 export const FlagImage = ({ teamName, size = "sm", className = "" }: FlagImageProps) => {
   const [hasError, setHasError] = useState(false);
-  const flagUrl = getFlagUrl(teamName, sizeWidths[size]);
   const playoffType = getPlayoffType(teamName);
   
   // Show confederation badge for playoff matches
@@ -128,24 +127,40 @@ export const FlagImage = ({ teamName, size = "sm", className = "" }: FlagImagePr
     );
   }
   
-  // Show placeholder if no flag URL or if image failed to load
-  if (!flagUrl || hasError) {
+  // If no team name, show placeholder
+  if (!teamName) {
     return (
       <div 
         className={`${sizeClasses[size]} bg-secondary/50 border border-border/50 rounded flex items-center justify-center flex-shrink-0 ${className}`}
-        title={teamName || undefined}
       >
         <Globe className="text-muted-foreground" size={iconSizes[size]} strokeWidth={1.5} />
       </div>
     );
   }
   
+  // Try to get the flag URL - if we have a country code, use it
+  const flagUrl = getFlagUrl(teamName, sizeWidths[size]);
+  
+  // If image failed to load OR no flag URL found, show fallback
+  if (hasError || !flagUrl) {
+    return (
+      <div 
+        className={`${sizeClasses[size]} bg-secondary/50 border border-border/50 rounded flex items-center justify-center flex-shrink-0 ${className}`}
+        title={teamName}
+      >
+        <Globe className="text-muted-foreground" size={iconSizes[size]} strokeWidth={1.5} />
+      </div>
+    );
+  }
+  
+  // Always try to render the flag image first
   return (
     <img
       src={flagUrl}
-      alt={teamName ? `Vlag van ${teamName}` : "Vlag"}
+      alt={`Vlag van ${teamName}`}
       className={`${sizeClasses[size]} object-cover rounded shadow-sm flex-shrink-0 ${className}`}
       onError={() => setHasError(true)}
+      loading="lazy"
     />
   );
 };
