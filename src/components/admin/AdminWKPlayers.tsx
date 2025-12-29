@@ -271,18 +271,46 @@ const AdminWKPlayers = () => {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={() => handleFetchImagesForCountry("Nederland")}
+          {/* Dropdown for fetching images per country */}
+          <Select
+            value=""
+            onValueChange={(country) => {
+              if (country) handleFetchImagesForCountry(country);
+            }}
             disabled={isFetchingImages}
           >
-            {isFetchingImages ? (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            ) : (
-              <Image className="w-4 h-4 mr-2" />
-            )}
-            Foto's NL ophalen
-          </Button>
+            <SelectTrigger className="w-[200px]">
+              {isFetchingImages ? (
+                <div className="flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Bezig...
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Image className="w-4 h-4" />
+                  Foto's ophalen
+                </div>
+              )}
+            </SelectTrigger>
+            <SelectContent>
+              {uniqueCountries.map((country) => {
+                const missingCount = getPlayersWithoutImages(country).length;
+                return (
+                  <SelectItem key={country} value={country} disabled={missingCount === 0}>
+                    <div className="flex items-center gap-2">
+                      <FlagImage teamName={country} size="xs" />
+                      {country}
+                      {missingCount > 0 && (
+                        <Badge variant="secondary" className="ml-auto text-xs">
+                          {missingCount} ontbreekt
+                        </Badge>
+                      )}
+                    </div>
+                  </SelectItem>
+                );
+              })}
+            </SelectContent>
+          </Select>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button onClick={handleOpenCreate}>
