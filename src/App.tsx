@@ -19,6 +19,7 @@ import Admin from "./pages/Admin";
 import Auth from "./pages/Auth";
 import Guide from "./pages/Guide";
 import Stadiums from "./pages/Stadiums";
+import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -45,6 +46,7 @@ const App = () => (
               <Route path="/admin/matches" element={<AdminMatches />} />
               <Route path="/players" element={<Players />} />
               <Route path="/admin/players" element={<AdminPlayers />} />
+              <Route path="/profiel" element={<Profile />} />
               <Route path="/handleiding" element={<Guide />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
