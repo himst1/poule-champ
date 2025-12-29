@@ -34,13 +34,14 @@ const getPlayoffType = (teamName: string | null): "fifa" | "uefa" | "caf" | "afc
   if (!teamName) return null;
   const lower = teamName.toLowerCase();
   
-  // Knockout stage placeholders (e.g., "Winnaar A", "Tweede B", etc.)
-  // Note: Only match exact patterns, not country names starting with numbers
+  // Knockout stage placeholders (e.g., "Winnaar A", "Tweede B", "Derde X", etc.)
   if (
     lower.startsWith("winnaar ") ||
     lower.startsWith("tweede ") ||
+    lower.startsWith("derde ") ||
     lower.startsWith("winner ") ||
     lower.startsWith("runner-up ") ||
+    lower.startsWith("third ") ||
     lower === "tbd" ||
     lower === "nader te bepalen"
   ) {
