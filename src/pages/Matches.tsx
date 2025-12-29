@@ -94,8 +94,6 @@ type Match = {
   id: string;
   home_team: string;
   away_team: string;
-  home_flag: string | null;
-  away_flag: string | null;
   home_score: number | null;
   away_score: number | null;
   kickoff_time: string;

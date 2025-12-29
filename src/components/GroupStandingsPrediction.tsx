@@ -30,7 +30,7 @@ const useGroupTeams = () => {
     queryFn: async () => {
       const { data: matches, error } = await supabase
         .from("matches")
-        .select("phase, home_team, away_team, home_flag, away_flag")
+        .select("phase, home_team, away_team")
         .like("phase", "Groep%");
 
       if (error) throw error;

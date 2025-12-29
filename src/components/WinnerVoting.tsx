@@ -68,7 +68,6 @@ interface WinnerPrediction {
   id: string;
   user_id: string;
   country: string;
-  country_flag: string | null;
   points_earned: number;
   created_at: string;
 }
