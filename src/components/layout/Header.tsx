@@ -1,11 +1,13 @@
 import { Trophy, Menu, X, LogOut, User, Settings, ChevronDown, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import ThemeToggle from "@/components/ThemeToggle";
 import { PredictionProgress } from "@/components/PredictionProgress";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { supabase } from "@/integrations/supabase/client";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,9 +17,35 @@ import {
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const { user, signOut, loading } = useAuth();
   const navigate = useNavigate();
   const { data: isAdmin } = useIsAdmin();
+
+  // Fetch avatar URL from profiles
+  useEffect(() => {
+    const fetchAvatar = async () => {
+      if (!user) {
+        setAvatarUrl(null);
+        return;
+      }
+      
+      const { data } = await supabase
+        .from("profiles")
+        .select("avatar_url")
+        .eq("id", user.id)
+        .maybeSingle();
+      
+      setAvatarUrl(data?.avatar_url || null);
+    };
+
+    fetchAvatar();
+  }, [user]);
+
+  const getInitials = () => {
+    const name = user?.user_metadata?.display_name || user?.email?.split("@")[0] || "?";
+    return name.slice(0, 2).toUpperCase();
+  };
 
   const handleSignOut = async () => {
     await signOut();
@@ -108,12 +136,13 @@ const Header = () => {
             {loading ? null : user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className={`flex items-center gap-2 px-3 py-1.5 rounded-full border transition-colors ${isAdmin ? 'bg-primary/10 border-primary/50 hover:bg-primary/20' : 'bg-secondary/80 border-border hover:bg-secondary'}`}>
-                    {isAdmin ? (
-                      <Shield className="w-4 h-4 text-primary" />
-                    ) : (
-                      <User className="w-4 h-4 text-muted-foreground" />
-                    )}
+                  <button className={`flex items-center gap-2 px-2 py-1.5 rounded-full border transition-colors ${isAdmin ? 'bg-primary/10 border-primary/50 hover:bg-primary/20' : 'bg-secondary/80 border-border hover:bg-secondary'}`}>
+                    <Avatar className="w-7 h-7">
+                      <AvatarImage src={avatarUrl || undefined} alt="Avatar" />
+                      <AvatarFallback className={`text-xs font-medium ${isAdmin ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground'}`}>
+                        {isAdmin ? <Shield className="w-3.5 h-3.5" /> : getInitials()}
+                      </AvatarFallback>
+                    </Avatar>
                     <span className="text-sm font-medium max-w-[120px] truncate">
                       {user.user_metadata?.display_name || user.email?.split("@")[0]}
                     </span>
@@ -253,12 +282,13 @@ const Header = () => {
               
               {user ? (
                 <div className="space-y-2 px-2">
-                  <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${isAdmin ? 'bg-primary/10 border border-primary/30' : 'bg-secondary/50'}`}>
-                    {isAdmin ? (
-                      <Shield className="w-4 h-4 text-primary" />
-                    ) : (
-                      <User className="w-4 h-4 text-muted-foreground" />
-                    )}
+                  <div className={`flex items-center gap-3 px-3 py-2 rounded-lg ${isAdmin ? 'bg-primary/10 border border-primary/30' : 'bg-secondary/50'}`}>
+                    <Avatar className="w-8 h-8">
+                      <AvatarImage src={avatarUrl || undefined} alt="Avatar" />
+                      <AvatarFallback className={`text-xs font-medium ${isAdmin ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground'}`}>
+                        {isAdmin ? <Shield className="w-4 h-4" /> : getInitials()}
+                      </AvatarFallback>
+                    </Avatar>
                     <span className="text-sm font-medium">{user.user_metadata?.display_name || user.email?.split("@")[0]}</span>
                     {isAdmin && (
                       <span className="text-xs font-semibold text-primary bg-primary/20 px-1.5 py-0.5 rounded ml-auto">
