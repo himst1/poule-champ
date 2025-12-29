@@ -97,13 +97,20 @@ export const COUNTRY_CODES: Record<string, string> = {
 
 // Normalize string for comparison (handles Unicode variations)
 const normalizeString = (str: string): string => {
-  return str.normalize('NFC').trim();
+  return str.normalize('NFC').trim().toLowerCase();
 };
 
-// Create a normalized lookup map for faster matching
+// Create a normalized lookup map for faster matching (case-insensitive)
 const normalizedCodes: Record<string, string> = {};
 Object.entries(COUNTRY_CODES).forEach(([name, code]) => {
+  // Store both original case and lowercase for lookup
   normalizedCodes[normalizeString(name)] = code;
+});
+
+// Also create a case-insensitive direct lookup
+const lowercaseCodes: Record<string, string> = {};
+Object.entries(COUNTRY_CODES).forEach(([name, code]) => {
+  lowercaseCodes[name.toLowerCase()] = code;
 });
 
 // Get all unique country names (excluding duplicates like "VS", "USA")
@@ -120,16 +127,26 @@ export const ALL_COUNTRIES = Object.keys(COUNTRY_CODES).filter(
 export const getFlagUrl = (teamName: string | null, width: number = 40): string | null => {
   if (!teamName) return null;
   
-  // Try direct lookup first
+  // Try direct lookup first (exact match)
   let code = COUNTRY_CODES[teamName];
   
-  // If not found, try normalized lookup
+  // If not found, try case-insensitive lookup
+  if (!code) {
+    code = lowercaseCodes[teamName.toLowerCase()];
+  }
+  
+  // If still not found, try normalized lookup (handles Unicode)
   if (!code) {
     const normalized = normalizeString(teamName);
     code = normalizedCodes[normalized];
   }
   
-  if (!code) return null;
+  if (!code) {
+    // Debug: log missing countries to help identify issues
+    console.warn(`[FlagLookup] Country not found: "${teamName}"`);
+    return null;
+  }
+  
   return `https://flagcdn.com/w${width}/${code.toLowerCase()}.png`;
 };
 
