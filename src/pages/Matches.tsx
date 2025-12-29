@@ -1062,17 +1062,124 @@ const MatchRow = ({ match, prediction, isLoggedIn, userId, pouleId, bulkPredicti
     <div className={`flex flex-col gap-2 p-3 rounded-lg transition-all ${
       prediction ? "bg-primary/5 border border-primary/20" : "bg-card border border-border/50 hover:border-border"
     }`}>
-      {/* Stadium & City Info */}
+      {/* Stadium & City Info - Desktop only */}
       {(match.stadium || match.city) && (
-        <div className="flex items-center gap-2 text-xs text-muted-foreground pl-1">
+        <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground pl-1">
           <span className="truncate">
             {[match.stadium, match.city].filter(Boolean).join(" • ")}
           </span>
         </div>
       )}
 
-      {/* Main match row */}
-      <div className="flex items-center gap-2 md:gap-4">
+      {/* Mobile Layout */}
+      <div className="flex flex-col gap-2 sm:hidden">
+        {/* Row 1: Teams with flags */}
+        <div className="flex items-center justify-between gap-2">
+          {/* Home Team */}
+          <div className="flex-1 flex items-center gap-2 min-w-0">
+            <FlagImage teamName={match.home_team} size="sm" />
+            <span className="text-sm font-medium truncate">{match.home_team}</span>
+          </div>
+          
+          {/* Time */}
+          <div className="shrink-0 text-xs text-muted-foreground font-medium">
+            {format(kickoffDate, "HH:mm")}
+          </div>
+          
+          {/* Away Team */}
+          <div className="flex-1 flex items-center gap-2 min-w-0 justify-end">
+            <span className="text-sm font-medium truncate text-right">{match.away_team}</span>
+            <FlagImage teamName={match.away_team} size="sm" />
+          </div>
+        </div>
+
+        {/* Row 2: Score/Input + Actions */}
+        <div className="flex items-center justify-center gap-3">
+          {/* Countdown */}
+          {canPredict && (
+            <div className="shrink-0">
+              <CountdownTimer kickoffDate={kickoffDate} />
+            </div>
+          )}
+
+          {/* Score / Prediction Input */}
+          {isFinished || isLive ? (
+            <div className={`flex items-center gap-1 px-3 py-1.5 rounded ${isLive ? "bg-destructive/20" : "bg-secondary"}`}>
+              <span className="w-8 text-center font-bold text-base">{match.home_score}</span>
+              <span className="text-muted-foreground text-sm">-</span>
+              <span className="w-8 text-center font-bold text-base">{match.away_score}</span>
+              {isLive && <span className="text-[10px] text-destructive font-bold ml-1">LIVE</span>}
+            </div>
+          ) : isLoggedIn && canPredict ? (
+            <div className="flex items-center gap-1">
+              <Input
+                type="number"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                min="0"
+                max="99"
+                value={homeScore}
+                onChange={(e) => setHomeScore(e.target.value)}
+                className="w-12 h-10 text-center text-sm font-bold p-0 touch-manipulation"
+                placeholder="-"
+              />
+              <span className="text-muted-foreground text-xs">-</span>
+              <Input
+                type="number"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                min="0"
+                max="99"
+                value={awayScore}
+                onChange={(e) => setAwayScore(e.target.value)}
+                className="w-12 h-10 text-center text-sm font-bold p-0 touch-manipulation"
+                placeholder="-"
+              />
+            </div>
+          ) : (
+            <div className="flex items-center gap-1 px-3 py-1.5 rounded bg-secondary">
+              <span className="w-8 text-center text-muted-foreground text-base">-</span>
+              <span className="text-muted-foreground text-sm">-</span>
+              <span className="w-8 text-center text-muted-foreground text-base">-</span>
+            </div>
+          )}
+
+          {/* AI & Save buttons */}
+          <div className="flex items-center gap-1">
+            {canPredict && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-8 w-8 p-0"
+                onClick={() => setShowAIPrediction(true)}
+              >
+                <Brain className="w-4 h-4 text-primary" />
+              </Button>
+            )}
+            
+            {isLoggedIn && canPredict && hasChanged ? (
+              <Button
+                size="sm"
+                variant="default"
+                className="h-8 px-3 text-xs"
+                onClick={savePrediction}
+                disabled={isSaving || homeScore === "" || awayScore === ""}
+              >
+                {isSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+              </Button>
+            ) : prediction && (isFinished || isLive) && prediction.points_earned !== null ? (
+              <span className={`text-sm font-bold ${prediction.points_earned > 0 ? "text-primary" : "text-muted-foreground"}`}>
+                +{prediction.points_earned}
+              </span>
+            ) : prediction ? (
+              <Check className="w-4 h-4 text-primary" />
+            ) : null}
+          </div>
+        </div>
+      </div>
+
+      {/* Desktop Layout */}
+      <div className="hidden sm:flex items-center gap-4">
         {/* Time / Countdown */}
         <div className="w-20 shrink-0 flex flex-col items-center gap-0.5">
           <span className="text-xs text-muted-foreground font-medium">
@@ -1082,7 +1189,7 @@ const MatchRow = ({ match, prediction, isLoggedIn, userId, pouleId, bulkPredicti
         </div>
 
         {/* Phase Badge */}
-        <div className="hidden sm:block w-20 shrink-0">
+        <div className="w-20 shrink-0">
           <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-medium truncate ${
             match.phase?.startsWith("Groep") 
               ? "bg-primary/10 text-primary"
@@ -1092,117 +1199,117 @@ const MatchRow = ({ match, prediction, isLoggedIn, userId, pouleId, bulkPredicti
           </span>
         </div>
 
-      {/* Home Team */}
-      <div className="flex-1 flex items-center justify-end gap-2 min-w-0">
-        <span className="text-sm font-medium truncate text-right">{match.home_team}</span>
-        <FlagImage teamName={match.home_team} size="md" />
+        {/* Home Team */}
+        <div className="flex-1 flex items-center justify-end gap-2 min-w-0">
+          <span className="text-sm font-medium truncate text-right">{match.home_team}</span>
+          <FlagImage teamName={match.home_team} size="md" />
+        </div>
+
+        {/* Score / Prediction Input */}
+        <div className="shrink-0 flex items-center gap-1">
+          {isFinished || isLive ? (
+            <div className={`flex items-center gap-1 px-3 py-1.5 rounded ${isLive ? "bg-destructive/20" : "bg-secondary"}`}>
+              <span className="w-8 text-center font-bold text-base">{match.home_score}</span>
+              <span className="text-muted-foreground text-sm">-</span>
+              <span className="w-8 text-center font-bold text-base">{match.away_score}</span>
+              {isLive && <span className="text-[10px] text-destructive font-bold ml-1">LIVE</span>}
+            </div>
+          ) : isLoggedIn && canPredict ? (
+            <div className="flex items-center gap-1">
+              <Input
+                type="number"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                min="0"
+                max="99"
+                value={homeScore}
+                onChange={(e) => setHomeScore(e.target.value)}
+                className="w-12 h-10 text-center text-sm font-bold p-0 touch-manipulation"
+                placeholder="-"
+              />
+              <span className="text-muted-foreground text-xs">-</span>
+              <Input
+                type="number"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                min="0"
+                max="99"
+                value={awayScore}
+                onChange={(e) => setAwayScore(e.target.value)}
+                className="w-12 h-10 text-center text-sm font-bold p-0 touch-manipulation"
+                placeholder="-"
+              />
+            </div>
+          ) : (
+            <div className="flex items-center gap-1 px-3 py-1.5 rounded bg-secondary">
+              <span className="w-8 text-center text-muted-foreground text-base">-</span>
+              <span className="text-muted-foreground text-sm">-</span>
+              <span className="w-8 text-center text-muted-foreground text-base">-</span>
+            </div>
+          )}
+        </div>
+
+        {/* Away Team */}
+        <div className="flex-1 flex items-center gap-2 min-w-0">
+          <FlagImage teamName={match.away_team} size="md" />
+          <span className="text-sm font-medium truncate">{match.away_team}</span>
+        </div>
+
+        {/* AI Prediction Button */}
+        <div className="w-8 shrink-0 flex justify-center">
+          {canPredict && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 w-7 p-0"
+                    onClick={() => setShowAIPrediction(true)}
+                  >
+                    <Brain className="w-4 h-4 text-primary" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>AI voorspelling</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+        </div>
+
+        {/* Save Button / Points */}
+        <div className="w-16 shrink-0 flex justify-end">
+          {isLoggedIn && canPredict && hasChanged ? (
+            <Button
+              size="sm"
+              variant="default"
+              className="h-7 px-2 text-xs"
+              onClick={savePrediction}
+              disabled={isSaving || homeScore === "" || awayScore === ""}
+            >
+              {isSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+            </Button>
+          ) : prediction && (isFinished || isLive) && prediction.points_earned !== null ? (
+            <span className={`text-sm font-bold ${prediction.points_earned > 0 ? "text-primary" : "text-muted-foreground"}`}>
+              +{prediction.points_earned}
+            </span>
+          ) : prediction ? (
+            <Check className="w-4 h-4 text-primary" />
+          ) : null}
+        </div>
       </div>
 
-      {/* Score / Prediction Input */}
-      <div className="shrink-0 flex items-center gap-1">
-        {isFinished || isLive ? (
-          <div className={`flex items-center gap-1 px-3 py-1.5 rounded ${isLive ? "bg-destructive/20" : "bg-secondary"}`}>
-            <span className="w-8 text-center font-bold text-base">{match.home_score}</span>
-            <span className="text-muted-foreground text-sm">-</span>
-            <span className="w-8 text-center font-bold text-base">{match.away_score}</span>
-            {isLive && <span className="text-[10px] text-destructive font-bold ml-1">LIVE</span>}
-          </div>
-        ) : isLoggedIn && canPredict ? (
-          <div className="flex items-center gap-1">
-            <Input
-              type="number"
-              inputMode="numeric"
-              pattern="[0-9]*"
-              min="0"
-              max="99"
-              value={homeScore}
-              onChange={(e) => setHomeScore(e.target.value)}
-              className="w-12 h-10 text-center text-sm font-bold p-0 touch-manipulation"
-              placeholder="-"
-            />
-            <span className="text-muted-foreground text-xs">-</span>
-            <Input
-              type="number"
-              inputMode="numeric"
-              pattern="[0-9]*"
-              min="0"
-              max="99"
-              value={awayScore}
-              onChange={(e) => setAwayScore(e.target.value)}
-              className="w-12 h-10 text-center text-sm font-bold p-0 touch-manipulation"
-              placeholder="-"
-            />
-          </div>
-        ) : (
-          <div className="flex items-center gap-1 px-3 py-1.5 rounded bg-secondary">
-            <span className="w-8 text-center text-muted-foreground text-base">-</span>
-            <span className="text-muted-foreground text-sm">-</span>
-            <span className="w-8 text-center text-muted-foreground text-base">-</span>
-          </div>
-        )}
-      </div>
-
-      {/* Away Team */}
-      <div className="flex-1 flex items-center gap-2 min-w-0">
-        <FlagImage teamName={match.away_team} size="md" />
-        <span className="text-sm font-medium truncate">{match.away_team}</span>
-      </div>
-
-      {/* AI Prediction Button */}
-      <div className="w-8 shrink-0 flex justify-center">
-        {canPredict && (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-7 w-7 p-0"
-                  onClick={() => setShowAIPrediction(true)}
-                >
-                  <Brain className="w-4 h-4 text-primary" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>AI voorspelling</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        )}
-      </div>
-
-      {/* Save Button / Points */}
-      <div className="w-16 shrink-0 flex justify-end">
-        {isLoggedIn && canPredict && hasChanged ? (
-          <Button
-            size="sm"
-            variant="default"
-            className="h-7 px-2 text-xs"
-            onClick={savePrediction}
-            disabled={isSaving || homeScore === "" || awayScore === ""}
-          >
-            {isSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
-          </Button>
-        ) : prediction && (isFinished || isLive) && prediction.points_earned !== null ? (
-          <span className={`text-sm font-bold ${prediction.points_earned > 0 ? "text-primary" : "text-muted-foreground"}`}>
-            +{prediction.points_earned}
-          </span>
-        ) : prediction ? (
-          <Check className="w-4 h-4 text-primary" />
-        ) : null}
-      </div>
-
-        {/* AI Prediction Modal */}
-        <AIPredictionModal
-          isOpen={showAIPrediction}
-          onClose={() => setShowAIPrediction(false)}
-          homeTeam={match.home_team}
-          awayTeam={match.away_team}
-          phase={match.phase}
-          kickoffTime={match.kickoff_time}
-          onApplyPrediction={isLoggedIn ? handleApplyAIPrediction : undefined}
-        />
-      </div>
+      {/* AI Prediction Modal */}
+      <AIPredictionModal
+        isOpen={showAIPrediction}
+        onClose={() => setShowAIPrediction(false)}
+        homeTeam={match.home_team}
+        awayTeam={match.away_team}
+        phase={match.phase}
+        kickoffTime={match.kickoff_time}
+        onApplyPrediction={isLoggedIn ? handleApplyAIPrediction : undefined}
+      />
     </div>
   );
 };
