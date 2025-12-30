@@ -28,7 +28,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Edit, Trash2, Goal, Search, Loader2, Image, User } from "lucide-react";
+import { Plus, Edit, Trash2, Goal, Search, Loader2, Image, User, Globe } from "lucide-react";
 import { toast } from "sonner";
 import { FlagImage } from "@/components/FlagImage";
 import { fetchAndUpdatePlayerImages } from "@/lib/api/player-images";
@@ -86,6 +86,7 @@ const AdminWKPlayers = () => {
   const [editingPlayer, setEditingPlayer] = useState<WKPlayer | null>(null);
   const [formData, setFormData] = useState<PlayerFormData>(emptyFormData);
   const [isFetchingImages, setIsFetchingImages] = useState(false);
+  const [isScrapingFifa, setIsScrapingFifa] = useState(false);
 
   const { data: players, isLoading } = useQuery({
     queryKey: ["admin-wk-players"],
@@ -253,6 +254,37 @@ const AdminWKPlayers = () => {
     }
   };
 
+  // Handle scraping FIFA for Belgian players
+  const handleScrapeFifaPlayers = async () => {
+    setIsScrapingFifa(true);
+    toast.info("Belgische spelers ophalen van FIFA website...");
+
+    try {
+      const { data, error } = await supabase.functions.invoke('scrape-fifa-players', {
+        body: { country: 'Belgium' },
+      });
+
+      if (error) {
+        console.error('Error scraping FIFA:', error);
+        toast.error(`Fout bij scrapen: ${error.message}`);
+        return;
+      }
+
+      if (data.success) {
+        toast.success(`${data.newPlayersAdded} nieuwe spelers toegevoegd, ${data.existingPlayersUpdated} bijgewerkt`);
+        queryClient.invalidateQueries({ queryKey: ["admin-wk-players"] });
+        queryClient.invalidateQueries({ queryKey: ["wk-players-for-voting"] });
+      } else {
+        toast.error(`Fout: ${data.error}`);
+      }
+    } catch (error) {
+      console.error("Error scraping FIFA:", error);
+      toast.error("Fout bij ophalen van spelers");
+    } finally {
+      setIsScrapingFifa(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -264,6 +296,25 @@ const AdminWKPlayers = () => {
           </p>
         </div>
         <div className="flex gap-2">
+          {/* Button to scrape FIFA for Belgian players */}
+          <Button
+            variant="outline"
+            onClick={handleScrapeFifaPlayers}
+            disabled={isScrapingFifa}
+          >
+            {isScrapingFifa ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Scrapen...
+              </>
+            ) : (
+              <>
+                <Globe className="w-4 h-4 mr-2" />
+                België FIFA
+              </>
+            )}
+          </Button>
+          
           {/* Dropdown for fetching images per country */}
           <Select
             value=""

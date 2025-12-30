@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.fetch-player-images]
 verify_jwt = false
+
+[functions.scrape-fifa-players]
+verify_jwt = false
