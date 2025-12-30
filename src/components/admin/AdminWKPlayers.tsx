@@ -28,7 +28,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Edit, Trash2, Goal, Search, Loader2, Image, User, Globe } from "lucide-react";
+import { Plus, Edit, Trash2, Goal, Search, Loader2, Image, User, Globe, ImagePlus } from "lucide-react";
 import { toast } from "sonner";
 import { FlagImage } from "@/components/FlagImage";
 import { fetchAndUpdatePlayerImages } from "@/lib/api/player-images";
@@ -86,6 +86,7 @@ const AdminWKPlayers = () => {
   const [editingPlayer, setEditingPlayer] = useState<WKPlayer | null>(null);
   const [formData, setFormData] = useState<PlayerFormData>(emptyFormData);
   const [isFetchingImages, setIsFetchingImages] = useState(false);
+  const [isFetchingAllMissing, setIsFetchingAllMissing] = useState(false);
   const [isScrapingFifa, setIsScrapingFifa] = useState(false);
   const [scrapingCountry, setScrapingCountry] = useState<string | null>(null);
 
@@ -225,6 +226,69 @@ const AdminWKPlayers = () => {
     return players?.filter((p) => p.country === country && !p.image_url) || [];
   };
 
+  // Get all players without images
+  const getAllPlayersWithoutImages = () => {
+    return players?.filter((p) => !p.image_url) || [];
+  };
+
+  const totalMissingPhotos = getAllPlayersWithoutImages().length;
+
+  // Handle fetching all missing images
+  const handleFetchAllMissingImages = async () => {
+    const playersToFetch = getAllPlayersWithoutImages();
+    
+    if (playersToFetch.length === 0) {
+      toast.info("Alle spelers hebben al een foto");
+      return;
+    }
+
+    setIsFetchingAllMissing(true);
+    toast.info(`Foto's ophalen voor ${playersToFetch.length} spelers...`);
+
+    try {
+      // Process in batches of 5 to avoid timeouts
+      const batchSize = 5;
+      let totalUpdated = 0;
+      let totalErrors: string[] = [];
+
+      for (let i = 0; i < playersToFetch.length; i += batchSize) {
+        const batch = playersToFetch.slice(i, i + batchSize);
+        
+        const result = await fetchAndUpdatePlayerImages(
+          batch.map((p) => ({
+            id: p.id,
+            name: p.name,
+            country: p.country,
+          }))
+        );
+
+        if (result.success) {
+          totalUpdated += result.updated;
+        } else {
+          totalErrors = [...totalErrors, ...result.errors];
+        }
+
+        // Show progress
+        toast.info(`Voortgang: ${Math.min(i + batchSize, playersToFetch.length)}/${playersToFetch.length} spelers verwerkt`);
+      }
+
+      if (totalUpdated > 0) {
+        toast.success(`${totalUpdated} foto's succesvol opgehaald`);
+        queryClient.invalidateQueries({ queryKey: ["admin-wk-players"] });
+        queryClient.invalidateQueries({ queryKey: ["wk-players-for-voting"] });
+      }
+      
+      if (totalErrors.length > 0) {
+        toast.error(`${totalErrors.length} fouten: ${totalErrors.slice(0, 3).join(", ")}${totalErrors.length > 3 ? '...' : ''}`);
+      }
+    } catch (error) {
+      console.error("Error fetching all images:", error);
+      toast.error("Fout bij ophalen van foto's");
+    } finally {
+      setIsFetchingAllMissing(false);
+    }
+  };
+
   // Handle fetching images for a country
   const handleFetchImagesForCountry = async (country: string) => {
     const playersToFetch = getPlayersWithoutImages(country);
@@ -305,6 +369,25 @@ const AdminWKPlayers = () => {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          {/* Button to fetch all missing images */}
+          <Button
+            variant="outline"
+            onClick={handleFetchAllMissingImages}
+            disabled={isFetchingAllMissing || isFetchingImages || totalMissingPhotos === 0}
+          >
+            {isFetchingAllMissing ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Bezig...
+              </>
+            ) : (
+              <>
+                <ImagePlus className="w-4 h-4 mr-2" />
+                Ontbrekende foto's ({totalMissingPhotos})
+              </>
+            )}
+          </Button>
+
           {/* Dropdown to scrape FIFA for players by country */}
           <Select
             value=""
