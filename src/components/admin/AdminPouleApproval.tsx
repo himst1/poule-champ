@@ -23,10 +23,19 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Check, X, Clock, Users, Search, Loader2 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Check, X, Clock, Users, Search, Loader2, Crown, Sparkles, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { format, parseISO } from "date-fns";
 import { nl } from "date-fns/locale";
+
+type PoulePlan = "free" | "pro" | "business";
 
 interface Poule {
   id: string;
@@ -36,6 +45,7 @@ interface Poule {
   max_members: number;
   approval_status: "pending" | "approved" | "rejected";
   status: "open" | "closed" | "finished";
+  plan_type: PoulePlan;
   created_at: string;
   creator_id: string;
   profiles?: { display_name: string | null };
@@ -117,6 +127,26 @@ const AdminPouleApproval = () => {
     },
   });
 
+  // Plan change mutation
+  const planMutation = useMutation({
+    mutationFn: async ({ pouleId, plan }: { pouleId: string; plan: PoulePlan }) => {
+      const { error } = await supabase
+        .from("poules")
+        .update({ plan_type: plan })
+        .eq("id", pouleId);
+      if (error) throw error;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-poules"] });
+      queryClient.invalidateQueries({ queryKey: ["poule-plan"] });
+      const planLabels = { free: "Gratis", pro: "Pro", business: "Zakelijk" };
+      toast.success(`Plan gewijzigd naar ${planLabels[variables.plan]}`);
+    },
+    onError: (error) => {
+      toast.error("Fout: " + error.message);
+    },
+  });
+
   const filteredPoules = poules?.filter(
     (poule) =>
       poule.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -124,6 +154,19 @@ const AdminPouleApproval = () => {
   );
 
   const pendingCount = poules?.filter((p) => p.approval_status === "pending").length || 0;
+
+  const getPlanBadge = (plan: PoulePlan) => {
+    switch (plan) {
+      case "free":
+        return <Badge variant="outline" className="gap-1"><Zap className="w-3 h-3" />Gratis</Badge>;
+      case "pro":
+        return <Badge className="gap-1 bg-primary/20 text-primary border-primary/30"><Sparkles className="w-3 h-3" />Pro</Badge>;
+      case "business":
+        return <Badge className="gap-1 bg-accent/20 text-accent border-accent/30"><Crown className="w-3 h-3" />Zakelijk</Badge>;
+      default:
+        return null;
+    }
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -208,6 +251,7 @@ const AdminPouleApproval = () => {
                 <TableHead>Maker</TableHead>
                 <TableHead>Inschrijfgeld</TableHead>
                 <TableHead className="text-center">Leden</TableHead>
+                <TableHead>Plan</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Aangemaakt</TableHead>
                 <TableHead className="w-[150px]"></TableHead>
@@ -216,13 +260,13 @@ const AdminPouleApproval = () => {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8">
+                  <TableCell colSpan={8} className="text-center py-8">
                     <Loader2 className="w-6 h-6 animate-spin mx-auto" />
                   </TableCell>
                 </TableRow>
               ) : filteredPoules?.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                     Geen poules gevonden
                   </TableCell>
                 </TableRow>
@@ -256,6 +300,39 @@ const AdminPouleApproval = () => {
                         <Users className="w-4 h-4 text-muted-foreground" />
                         {poule.member_count}/{poule.max_members}
                       </div>
+                    </TableCell>
+                    <TableCell>
+                      <Select
+                        value={poule.plan_type}
+                        onValueChange={(value: PoulePlan) => 
+                          planMutation.mutate({ pouleId: poule.id, plan: value })
+                        }
+                        disabled={planMutation.isPending}
+                      >
+                        <SelectTrigger className="w-[120px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="free">
+                            <div className="flex items-center gap-2">
+                              <Zap className="w-3 h-3" />
+                              Gratis
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="pro">
+                            <div className="flex items-center gap-2">
+                              <Sparkles className="w-3 h-3 text-primary" />
+                              Pro
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="business">
+                            <div className="flex items-center gap-2">
+                              <Crown className="w-3 h-3 text-accent" />
+                              Zakelijk
+                            </div>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
                     </TableCell>
                     <TableCell>{getStatusBadge(poule.approval_status)}</TableCell>
                     <TableCell className="text-muted-foreground">
