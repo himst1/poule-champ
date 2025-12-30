@@ -45,8 +45,10 @@ Deno.serve(async (req) => {
       try {
         console.log(`Searching for: ${player.name} (${player.country})`);
         
-        // Search for player photo using Firecrawl
-        const searchQuery = `${player.name} ${player.country} national team football player photo portrait`;
+        // Search directly on Transfermarkt for high-quality player photos
+        const searchQuery = `site:transfermarkt.com ${player.name} ${player.country}`;
+        
+        console.log(`Searching Transfermarkt for: ${player.name}`);
         
         const response = await fetch('https://api.firecrawl.dev/v1/search', {
           method: 'POST',
@@ -57,6 +59,9 @@ Deno.serve(async (req) => {
           body: JSON.stringify({
             query: searchQuery,
             limit: 3,
+            scrapeOptions: {
+              formats: ['markdown', 'html'],
+            },
           }),
         });
 
@@ -73,51 +78,81 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        // Try to find a good image URL from search results
+        // Try to find Transfermarkt image URL from search results
         let imageUrl: string | null = null;
         
         if (data.data && Array.isArray(data.data)) {
           for (const result of data.data) {
-            // Look for image URLs in the result metadata or content
-            if (result.metadata?.ogImage) {
-              imageUrl = result.metadata.ogImage;
+            // Check for Transfermarkt specific image patterns
+            const ogImage = result.metadata?.ogImage;
+            const image = result.metadata?.image;
+            
+            // Prefer img.transfermarkt.com URLs
+            if (ogImage && ogImage.includes('img.transfermarkt.com')) {
+              imageUrl = ogImage;
+              console.log(`Found Transfermarkt image: ${imageUrl}`);
               break;
             }
-            if (result.metadata?.image) {
-              imageUrl = result.metadata.image;
+            if (image && image.includes('img.transfermarkt.com')) {
+              imageUrl = image;
+              console.log(`Found Transfermarkt image: ${imageUrl}`);
               break;
+            }
+            
+            // Also check in HTML content for image URLs
+            if (result.html) {
+              const tmImageMatch = result.html.match(/https:\/\/img\.transfermarkt\.com\/[^"'\s]+/);
+              if (tmImageMatch) {
+                imageUrl = tmImageMatch[0];
+                console.log(`Extracted Transfermarkt image from HTML: ${imageUrl}`);
+                break;
+              }
+            }
+            
+            // Fallback to any ogImage or image
+            if (!imageUrl && ogImage) {
+              imageUrl = ogImage;
+            }
+            if (!imageUrl && image) {
+              imageUrl = image;
             }
           }
         }
 
-        // If no image found from search, try scraping a specific source
+        // If no Transfermarkt image found, try FIFA search as fallback
         if (!imageUrl) {
-          // Try to scrape from Transfermarkt or similar
-          const scrapeQuery = `site:transfermarkt.com ${player.name}`;
+          console.log(`No Transfermarkt image found for ${player.name}, trying FIFA...`);
           
-          const scrapeResponse = await fetch('https://api.firecrawl.dev/v1/search', {
+          const fifaQuery = `site:fifa.com ${player.name} ${player.country} player`;
+          
+          const fifaResponse = await fetch('https://api.firecrawl.dev/v1/search', {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${apiKey}`,
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              query: scrapeQuery,
-              limit: 1,
+              query: fifaQuery,
+              limit: 2,
               scrapeOptions: {
                 formats: ['markdown'],
               },
             }),
           });
 
-          const scrapeData = await scrapeResponse.json();
+          const fifaData = await fifaResponse.json();
           
-          if (scrapeResponse.ok && scrapeData.data?.[0]) {
-            const result = scrapeData.data[0];
-            if (result.metadata?.ogImage) {
-              imageUrl = result.metadata.ogImage;
-            } else if (result.metadata?.image) {
-              imageUrl = result.metadata.image;
+          if (fifaResponse.ok && fifaData.data) {
+            for (const result of fifaData.data) {
+              if (result.metadata?.ogImage) {
+                imageUrl = result.metadata.ogImage;
+                console.log(`Found FIFA image for ${player.name}: ${imageUrl}`);
+                break;
+              }
+              if (result.metadata?.image) {
+                imageUrl = result.metadata.image;
+                break;
+              }
             }
           }
         }
