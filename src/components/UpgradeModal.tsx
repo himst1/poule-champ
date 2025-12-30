@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Crown, Sparkles, Bell, CreditCard, Check } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import confetti from "canvas-confetti";
+import { useToast } from "@/hooks/use-toast";
 
 type FeatureType = "ai" | "push" | "payments";
 
@@ -72,12 +73,20 @@ const fireConfetti = () => {
 
 export const UpgradeModal = ({ isOpen, onClose, feature, pouleName }: UpgradeModalProps) => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const info = featureInfo[feature];
   const FeatureIcon = info.icon;
 
   const handleUpgrade = () => {
     // Fire confetti celebration
     fireConfetti();
+    // Show success toast
+    toast({
+      title: "🎉 Welkom bij Pro!",
+      description: pouleName 
+        ? `"${pouleName}" wordt geüpgraded. Je krijgt nu toegang tot alle premium features!`
+        : "Je krijgt nu toegang tot alle premium features!",
+    });
     // Navigate to pricing section on home page
     navigate("/#pricing");
     onClose();

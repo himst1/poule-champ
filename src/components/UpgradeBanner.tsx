@@ -2,6 +2,7 @@ import { Crown, Sparkles, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import confetti from "canvas-confetti";
+import { useToast } from "@/hooks/use-toast";
 
 interface UpgradeBannerProps {
   pouleName: string;
@@ -40,9 +41,14 @@ const fireConfetti = () => {
 
 export const UpgradeBanner = ({ pouleName }: UpgradeBannerProps) => {
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const handleUpgrade = () => {
     fireConfetti();
+    toast({
+      title: "🎉 Welkom bij Pro!",
+      description: `"${pouleName}" wordt geüpgraded. Je krijgt nu toegang tot alle premium features!`,
+    });
     navigate("/#pricing");
   };
 
