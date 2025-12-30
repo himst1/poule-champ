@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -87,6 +88,7 @@ const AdminWKPlayers = () => {
   const [formData, setFormData] = useState<PlayerFormData>(emptyFormData);
   const [isFetchingImages, setIsFetchingImages] = useState(false);
   const [isFetchingAllMissing, setIsFetchingAllMissing] = useState(false);
+  const [fetchProgress, setFetchProgress] = useState({ current: 0, total: 0, found: 0 });
   const [isScrapingFifa, setIsScrapingFifa] = useState(false);
   const [scrapingCountry, setScrapingCountry] = useState<string | null>(null);
 
@@ -243,7 +245,7 @@ const AdminWKPlayers = () => {
     }
 
     setIsFetchingAllMissing(true);
-    toast.info(`Foto's ophalen voor ${playersToFetch.length} spelers...`);
+    setFetchProgress({ current: 0, total: playersToFetch.length, found: 0 });
 
     try {
       // Process in batches of 5 to avoid timeouts
@@ -268,8 +270,9 @@ const AdminWKPlayers = () => {
           totalErrors = [...totalErrors, ...result.errors];
         }
 
-        // Show progress
-        toast.info(`Voortgang: ${Math.min(i + batchSize, playersToFetch.length)}/${playersToFetch.length} spelers verwerkt`);
+        // Update progress
+        const processed = Math.min(i + batchSize, playersToFetch.length);
+        setFetchProgress({ current: processed, total: playersToFetch.length, found: totalUpdated });
       }
 
       if (totalUpdated > 0) {
@@ -286,6 +289,7 @@ const AdminWKPlayers = () => {
       toast.error("Fout bij ophalen van foto's");
     } finally {
       setIsFetchingAllMissing(false);
+      setFetchProgress({ current: 0, total: 0, found: 0 });
     }
   };
 
@@ -461,13 +465,61 @@ const AdminWKPlayers = () => {
               })}
             </SelectContent>
           </Select>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={handleOpenCreate}>
-                <Plus className="w-4 h-4 mr-2" />
-                Speler toevoegen
-              </Button>
-            </DialogTrigger>
+        </div>
+      </div>
+
+      {/* Progress bar during photo fetching */}
+      {isFetchingAllMissing && fetchProgress.total > 0 && (
+        <Card className="border-primary/20 bg-primary/5">
+          <CardContent className="py-4">
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="font-medium">Foto's ophalen...</span>
+                <span className="text-muted-foreground">
+                  {fetchProgress.current}/{fetchProgress.total} ({Math.round((fetchProgress.current / fetchProgress.total) * 100)}%)
+                </span>
+              </div>
+              <Progress value={(fetchProgress.current / fetchProgress.total) * 100} className="h-2" />
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>{fetchProgress.found} foto's gevonden</span>
+                <span>{fetchProgress.total - fetchProgress.current} resterend</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Filters */}
+      <div className="flex flex-col md:flex-row gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Zoek speler..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        <Select value={selectedCountry} onValueChange={setSelectedCountry}>
+          <SelectTrigger className="w-full md:w-[200px]">
+            <SelectValue placeholder="Filter op land" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Alle landen</SelectItem>
+            {uniqueCountries.map((country) => (
+              <SelectItem key={country} value={country}>
+                {country}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button onClick={handleOpenCreate}>
+              <Plus className="w-4 h-4 mr-2" />
+              Speler toevoegen
+            </Button>
+          </DialogTrigger>
           <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle>
@@ -579,33 +631,6 @@ const AdminWKPlayers = () => {
             </form>
           </DialogContent>
         </Dialog>
-        </div>
-      </div>
-
-      {/* Filters */}
-      <div className="flex flex-col md:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Zoek speler..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        <Select value={selectedCountry} onValueChange={setSelectedCountry}>
-          <SelectTrigger className="w-full md:w-[200px]">
-            <SelectValue placeholder="Filter op land" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Alle landen</SelectItem>
-            {uniqueCountries.map((country) => (
-              <SelectItem key={country} value={country}>
-                {country}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
       </div>
 
       {/* Table */}
