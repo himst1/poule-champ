@@ -7,7 +7,7 @@ import Footer from "@/components/layout/Footer";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Calendar, Filter, Trophy, Clock, Check, X, LogIn, Loader2, Bell, BellOff, Star, StarOff, Brain, Save, Users, Search, ChevronDown, SlidersHorizontal } from "lucide-react";
+import { Calendar, Filter, Trophy, Clock, Check, X, LogIn, Loader2, Bell, BellOff, Star, StarOff, Brain, Save, Users, Search, ChevronDown, SlidersHorizontal, Crown } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format, parseISO, isBefore, differenceInSeconds, differenceInMinutes, addMinutes } from "date-fns";
@@ -24,6 +24,8 @@ import { AIPredictionStats } from "@/components/AIPredictionStats";
 import { AIPredictionChart } from "@/components/AIPredictionChart";
 import { FlagImage } from "@/components/FlagImage";
 import { COUNTRY_CODES, ALL_COUNTRIES, getFlagUrl } from "@/lib/flags";
+import { usePoulePlan } from "@/hooks/usePoulePlan";
+import { UpgradeModal } from "@/components/UpgradeModal";
 
 // Countdown hook for upcoming matches
 const useCountdown = (targetDate: Date) => {
@@ -514,7 +516,11 @@ const Matches = () => {
   const [localScores, setLocalScores] = useState<Record<string, { homeScore: string; awayScore: string }>>({});
   const [aiGeneratedMatches, setAiGeneratedMatches] = useState<Set<string>>(new Set());
   const [isSavingAll, setIsSavingAll] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const queryClient = useQueryClient();
+
+  // Get poule plan for feature gating
+  const { canUseAI } = usePoulePlan(selectedPouleId || undefined);
 
   // Handle local score changes from MatchRow
   const handleLocalScoreChange = useCallback((matchId: string, homeScore: string, awayScore: string) => {
@@ -927,18 +933,42 @@ const Matches = () => {
                         
                         {/* Bulk AI Prediction Button */}
                         {predictableMatches.length > 0 && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setShowBulkAIPrediction(true)}
-                            className="gap-2"
-                          >
-                            <Brain className="w-4 h-4 text-primary" />
-                            Bulk AI
-                            <span className="bg-primary/10 text-primary text-xs px-1.5 py-0.5 rounded">
-                              {predictableMatches.length}
-                            </span>
-                          </Button>
+                          canUseAI ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setShowBulkAIPrediction(true)}
+                              className="gap-2"
+                            >
+                              <Brain className="w-4 h-4 text-primary" />
+                              Bulk AI
+                              <span className="bg-primary/10 text-primary text-xs px-1.5 py-0.5 rounded">
+                                {predictableMatches.length}
+                              </span>
+                            </Button>
+                          ) : (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setShowUpgradeModal(true)}
+                                    className="gap-2"
+                                  >
+                                    <Crown className="w-4 h-4 text-muted-foreground" />
+                                    Bulk AI
+                                    <span className="bg-muted text-muted-foreground text-xs px-1.5 py-0.5 rounded">
+                                      Pro
+                                    </span>
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Upgrade naar Pro voor AI voorspellingen</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )
                         )}
                       </div>
                     </div>
@@ -1049,6 +1079,8 @@ const Matches = () => {
                         isLoggedIn={!!user}
                         userId={user?.id}
                         pouleId={selectedPouleId}
+                        canUseAI={canUseAI}
+                        onUpgradeClick={() => setShowUpgradeModal(true)}
                         bulkPrediction={bulkPredictions[match.id]}
                         onScoreChange={(home, away) => handleLocalScoreChange(match.id, home, away)}
                         onSave={() => {
@@ -1092,6 +1124,13 @@ const Matches = () => {
         matches={predictableMatches}
         onApplyPredictions={handleBulkPredictionsApplied}
       />
+
+      {/* Upgrade Modal */}
+      <UpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        feature="ai"
+      />
     </div>
   );
 };
@@ -1105,9 +1144,11 @@ interface MatchRowProps {
   bulkPrediction?: { homeScore: number; awayScore: number };
   onScoreChange?: (homeScore: string, awayScore: string) => void;
   onSave?: () => void;
+  canUseAI?: boolean;
+  onUpgradeClick?: () => void;
 }
 
-const MatchRow = ({ match, prediction, isLoggedIn, userId, pouleId, bulkPrediction, onScoreChange, onSave }: MatchRowProps) => {
+const MatchRow = ({ match, prediction, isLoggedIn, userId, pouleId, bulkPrediction, onScoreChange, onSave, canUseAI = true, onUpgradeClick }: MatchRowProps) => {
   const kickoffDate = parseISO(match.kickoff_time);
   const isFinished = match.status === "finished";
   const isLive = match.status === "live";
@@ -1287,9 +1328,13 @@ const MatchRow = ({ match, prediction, isLoggedIn, userId, pouleId, bulkPredicti
                 size="sm"
                 variant="ghost"
                 className="h-8 w-8 p-0"
-                onClick={() => setShowAIPrediction(true)}
+                onClick={() => canUseAI ? setShowAIPrediction(true) : onUpgradeClick?.()}
               >
-                <Brain className="w-4 h-4 text-primary" />
+                {canUseAI ? (
+                  <Brain className="w-4 h-4 text-primary" />
+                ) : (
+                  <Crown className="w-4 h-4 text-muted-foreground" />
+                )}
               </Button>
             )}
             
@@ -1401,13 +1446,17 @@ const MatchRow = ({ match, prediction, isLoggedIn, userId, pouleId, bulkPredicti
                     size="sm"
                     variant="ghost"
                     className="h-7 w-7 p-0"
-                    onClick={() => setShowAIPrediction(true)}
+                    onClick={() => canUseAI ? setShowAIPrediction(true) : onUpgradeClick?.()}
                   >
-                    <Brain className="w-4 h-4 text-primary" />
+                    {canUseAI ? (
+                      <Brain className="w-4 h-4 text-primary" />
+                    ) : (
+                      <Crown className="w-4 h-4 text-muted-foreground" />
+                    )}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>AI voorspelling</p>
+                  <p>{canUseAI ? "AI voorspelling" : "Upgrade naar Pro voor AI"}</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
