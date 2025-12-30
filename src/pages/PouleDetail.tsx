@@ -34,6 +34,7 @@ import { FlagImage } from "@/components/FlagImage";
 import { ALL_COUNTRIES } from "@/lib/flags";
 import { usePoulePlan } from "@/hooks/usePoulePlan";
 import { UpgradeModal } from "@/components/UpgradeModal";
+import { UpgradeBanner } from "@/components/UpgradeBanner";
 
 // Countdown hook for upcoming matches
 const useCountdown = (targetDate: Date) => {
@@ -167,7 +168,7 @@ const PouleDetail = () => {
   const [upgradeFeature, setUpgradeFeature] = useState<"ai" | "push" | "payments">("ai");
   
   // Get poule plan for feature gating
-  const { canUseAI, canUsePushNotifications, plan } = usePoulePlan(id);
+  const { canUseAI, canUsePushNotifications, isPremium, plan } = usePoulePlan(id);
   
   const handlePremiumFeature = (feature: "ai" | "push" | "payments") => {
     setUpgradeFeature(feature);
@@ -571,6 +572,9 @@ const PouleDetail = () => {
             <ArrowLeft className="w-4 h-4" />
             Terug naar dashboard
           </button>
+
+          {/* Upgrade Banner for Free Poules */}
+          {!isPremium && poule && <UpgradeBanner pouleName={poule.name} />}
 
           {/* Poule Header */}
           <div className="glass-card rounded-2xl p-6 mb-6">
