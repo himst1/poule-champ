@@ -376,6 +376,7 @@ export type Database = {
           invite_code: string | null
           max_members: number | null
           name: string
+          plan_type: Database["public"]["Enums"]["poule_plan"]
           prize_distribution: Json | null
           scoring_rules: Json | null
           status: Database["public"]["Enums"]["poule_status"]
@@ -393,6 +394,7 @@ export type Database = {
           invite_code?: string | null
           max_members?: number | null
           name: string
+          plan_type?: Database["public"]["Enums"]["poule_plan"]
           prize_distribution?: Json | null
           scoring_rules?: Json | null
           status?: Database["public"]["Enums"]["poule_status"]
@@ -410,6 +412,7 @@ export type Database = {
           invite_code?: string | null
           max_members?: number | null
           name?: string
+          plan_type?: Database["public"]["Enums"]["poule_plan"]
           prize_distribution?: Json | null
           scoring_rules?: Json | null
           status?: Database["public"]["Enums"]["poule_status"]
@@ -884,6 +887,7 @@ export type Database = {
       approval_status: "pending" | "approved" | "rejected"
       match_status: "pending" | "live" | "finished"
       payment_status: "pending" | "succeeded" | "failed" | "refunded"
+      poule_plan: "free" | "pro" | "business"
       poule_status: "open" | "closed" | "finished"
     }
     CompositeTypes: {
@@ -1016,6 +1020,7 @@ export const Constants = {
       approval_status: ["pending", "approved", "rejected"],
       match_status: ["pending", "live", "finished"],
       payment_status: ["pending", "succeeded", "failed", "refunded"],
+      poule_plan: ["free", "pro", "business"],
       poule_status: ["open", "closed", "finished"],
     },
   },

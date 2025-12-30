@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Trophy, Users, ArrowLeft, Share2, Copy, Check, Target, Loader2, Lock, Clock, Brain, Star, StarOff, Calendar, X, Save, Settings, Goal, Eye, AlertTriangle, BarChart3 } from "lucide-react";
+import { Trophy, Users, ArrowLeft, Share2, Copy, Check, Target, Loader2, Lock, Clock, Brain, Star, StarOff, Calendar, X, Save, Settings, Goal, Eye, AlertTriangle, BarChart3, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -32,6 +32,8 @@ import { PouleAnalytics } from "@/components/PouleAnalytics";
 import { PouleChat } from "@/components/PouleChat";
 import { FlagImage } from "@/components/FlagImage";
 import { ALL_COUNTRIES } from "@/lib/flags";
+import { usePoulePlan } from "@/hooks/usePoulePlan";
+import { UpgradeModal } from "@/components/UpgradeModal";
 
 // Countdown hook for upcoming matches
 const useCountdown = (targetDate: Date) => {
@@ -161,6 +163,16 @@ const PouleDetail = () => {
   const [localScores, setLocalScores] = useState<Record<string, { homeScore: string; awayScore: string }>>({});
   const [aiGeneratedMatches, setAiGeneratedMatches] = useState<Set<string>>(new Set());
   const [isSavingAll, setIsSavingAll] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [upgradeFeature, setUpgradeFeature] = useState<"ai" | "push" | "payments">("ai");
+  
+  // Get poule plan for feature gating
+  const { canUseAI, canUsePushNotifications, plan } = usePoulePlan(id);
+  
+  const handlePremiumFeature = (feature: "ai" | "push" | "payments") => {
+    setUpgradeFeature(feature);
+    setShowUpgradeModal(true);
+  };
   
   // Filter states
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -594,7 +606,28 @@ const PouleDetail = () => {
                   <Eye className="w-4 h-4 mr-2" />
                   Overzicht
                 </Button>
-                <PushNotificationToggle userId={user?.id} />
+                {canUsePushNotifications ? (
+                  <PushNotificationToggle userId={user?.id} />
+                ) : (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handlePremiumFeature("push")}
+                          className="gap-2"
+                        >
+                          <Crown className="w-4 h-4 text-muted-foreground" />
+                          Notificaties
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Upgrade naar Pro voor push notificaties</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
                 {user?.id === poule.creator_id && members && (
                   <PouleManagement
                     pouleId={poule.id}
@@ -793,18 +826,42 @@ const PouleDetail = () => {
                     </Button>
                   )}
                   {user && predictableMatches.length > 0 && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowBulkAIPrediction(true)}
-                      className="gap-2"
-                    >
-                      <Brain className="w-4 h-4 text-primary" />
-                      Bulk AI
-                      <span className="bg-primary/10 text-primary text-xs px-1.5 py-0.5 rounded">
-                        {predictableMatches.length}
-                      </span>
-                    </Button>
+                    canUseAI ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowBulkAIPrediction(true)}
+                        className="gap-2"
+                      >
+                        <Brain className="w-4 h-4 text-primary" />
+                        Bulk AI
+                        <span className="bg-primary/10 text-primary text-xs px-1.5 py-0.5 rounded">
+                          {predictableMatches.length}
+                        </span>
+                      </Button>
+                    ) : (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handlePremiumFeature("ai")}
+                              className="gap-2"
+                            >
+                              <Crown className="w-4 h-4 text-muted-foreground" />
+                              Bulk AI
+                              <span className="bg-muted text-muted-foreground text-xs px-1.5 py-0.5 rounded">
+                                Pro
+                              </span>
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Upgrade naar Pro voor AI voorspellingen</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )
                   )}
                 </div>
               </div>
@@ -954,6 +1011,8 @@ const PouleDetail = () => {
                     prediction={predictionMap[match.id]}
                     pouleId={id!}
                     userId={user?.id}
+                    canUseAI={canUseAI}
+                    onUpgradeClick={() => handlePremiumFeature("ai")}
                     onSave={() => {
                       queryClient.invalidateQueries({ queryKey: ["poule-predictions"] });
                       queryClient.invalidateQueries({ queryKey: ["ai-prediction-stats"] });
@@ -1055,6 +1114,14 @@ const PouleDetail = () => {
         onApplyPredictions={handleBulkPredictionsApplied}
       />
 
+      {/* Upgrade Modal */}
+      <UpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        feature={upgradeFeature}
+        pouleName={poule.name}
+      />
+
       {/* Poule Chat */}
       <PouleChat pouleId={id!} pouleName={poule.name} />
     </div>
@@ -1070,9 +1137,11 @@ interface MatchPredictionCardProps {
   onSave: (isAiGenerated: boolean) => void;
   bulkPrediction?: { homeScore: number; awayScore: number };
   onScoreChange?: (homeScore: string, awayScore: string) => void;
+  canUseAI?: boolean;
+  onUpgradeClick?: () => void;
 }
 
-const MatchPredictionCard = ({ match, prediction, pouleId, userId, onSave, bulkPrediction, onScoreChange }: MatchPredictionCardProps) => {
+const MatchPredictionCard = ({ match, prediction, pouleId, userId, onSave, bulkPrediction, onScoreChange, canUseAI = true, onUpgradeClick }: MatchPredictionCardProps) => {
   const kickoffDate = parseISO(match.kickoff_time);
   const lockTime = addMinutes(kickoffDate, -5); // Lock 5 minutes before kickoff
   
@@ -1275,13 +1344,17 @@ const MatchPredictionCard = ({ match, prediction, pouleId, userId, onSave, bulkP
                   <Button 
                     variant="outline" 
                     size="icon"
-                    onClick={() => setShowAIPrediction(true)}
+                    onClick={() => canUseAI ? setShowAIPrediction(true) : onUpgradeClick?.()}
                   >
-                    <Brain className="w-4 h-4 text-primary" />
+                    {canUseAI ? (
+                      <Brain className="w-4 h-4 text-primary" />
+                    ) : (
+                      <Crown className="w-4 h-4 text-muted-foreground" />
+                    )}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>AI voorspelling</p>
+                  <p>{canUseAI ? "AI voorspelling" : "Upgrade naar Pro voor AI"}</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
