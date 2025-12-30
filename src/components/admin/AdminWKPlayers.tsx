@@ -87,6 +87,13 @@ const AdminWKPlayers = () => {
   const [formData, setFormData] = useState<PlayerFormData>(emptyFormData);
   const [isFetchingImages, setIsFetchingImages] = useState(false);
   const [isScrapingFifa, setIsScrapingFifa] = useState(false);
+  const [scrapingCountry, setScrapingCountry] = useState<string | null>(null);
+
+  // FIFA supported countries
+  const fifaCountries = [
+    "België", "Nederland", "Duitsland", "Frankrijk", "Spanje", 
+    "Engeland", "Portugal", "Brazilië", "Argentinië"
+  ];
 
   const { data: players, isLoading } = useQuery({
     queryKey: ["admin-wk-players"],
@@ -254,14 +261,15 @@ const AdminWKPlayers = () => {
     }
   };
 
-  // Handle scraping FIFA for Belgian players
-  const handleScrapeFifaPlayers = async () => {
+  // Handle scraping FIFA for players of a specific country
+  const handleScrapeFifaPlayers = async (country: string) => {
     setIsScrapingFifa(true);
-    toast.info("Belgische spelers ophalen van FIFA website...");
+    setScrapingCountry(country);
+    toast.info(`${country} spelers ophalen van FIFA website...`);
 
     try {
       const { data, error } = await supabase.functions.invoke('scrape-fifa-players', {
-        body: { country: 'Belgium' },
+        body: { country },
       });
 
       if (error) {
@@ -271,7 +279,7 @@ const AdminWKPlayers = () => {
       }
 
       if (data.success) {
-        toast.success(`${data.newPlayersAdded} nieuwe spelers toegevoegd, ${data.existingPlayersUpdated} bijgewerkt`);
+        toast.success(`${country}: ${data.newPlayersAdded} nieuwe spelers toegevoegd, ${data.existingPlayersUpdated} bijgewerkt`);
         queryClient.invalidateQueries({ queryKey: ["admin-wk-players"] });
         queryClient.invalidateQueries({ queryKey: ["wk-players-for-voting"] });
       } else {
@@ -282,6 +290,7 @@ const AdminWKPlayers = () => {
       toast.error("Fout bij ophalen van spelers");
     } finally {
       setIsScrapingFifa(false);
+      setScrapingCountry(null);
     }
   };
 
@@ -295,25 +304,39 @@ const AdminWKPlayers = () => {
             {players?.length || 0} spelers uit {uniqueCountries.length} landen
           </p>
         </div>
-        <div className="flex gap-2">
-          {/* Button to scrape FIFA for Belgian players */}
-          <Button
-            variant="outline"
-            onClick={handleScrapeFifaPlayers}
+        <div className="flex flex-wrap gap-2">
+          {/* Dropdown to scrape FIFA for players by country */}
+          <Select
+            value=""
+            onValueChange={(country) => {
+              if (country) handleScrapeFifaPlayers(country);
+            }}
             disabled={isScrapingFifa}
           >
-            {isScrapingFifa ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Scrapen...
-              </>
-            ) : (
-              <>
-                <Globe className="w-4 h-4 mr-2" />
-                België FIFA
-              </>
-            )}
-          </Button>
+            <SelectTrigger className="w-[180px]">
+              {isScrapingFifa ? (
+                <div className="flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  {scrapingCountry}...
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Globe className="w-4 h-4" />
+                  FIFA Spelers
+                </div>
+              )}
+            </SelectTrigger>
+            <SelectContent>
+              {fifaCountries.map((country) => (
+                <SelectItem key={country} value={country}>
+                  <div className="flex items-center gap-2">
+                    <FlagImage teamName={country} size="xs" />
+                    {country}
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           
           {/* Dropdown for fetching images per country */}
           <Select
