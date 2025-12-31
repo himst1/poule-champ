@@ -7,7 +7,7 @@ import Footer from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -31,7 +31,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Edit, Trash2, Goal, Search, Shield, AlertCircle } from "lucide-react";
+import { Plus, Edit, Trash2, Goal, Search, Shield, AlertCircle, Users } from "lucide-react";
 import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { FlagImage } from "@/components/FlagImage";
@@ -41,30 +41,28 @@ interface Player {
   name: string;
   country: string;
   position: string;
-  date_of_birth: string | null;
+  age: number;
   goals: number;
-  club: string | null;
-  jersey_number: number | null;
+  international_caps: number;
+  image_url: string | null;
 }
 
 interface PlayerFormData {
   name: string;
   country: string;
   position: string;
-  date_of_birth: string;
+  age: number;
   goals: number;
-  club: string;
-  jersey_number: number | null;
+  international_caps: number;
 }
 
 const emptyFormData: PlayerFormData = {
   name: "",
   country: "",
   position: "Aanvaller",
-  date_of_birth: "",
+  age: 25,
   goals: 0,
-  club: "",
-  jersey_number: null,
+  international_caps: 0,
 };
 
 const AdminPlayers = () => {
@@ -89,10 +87,10 @@ const AdminPlayers = () => {
   });
 
   const { data: players, isLoading } = useQuery({
-    queryKey: ["admin-players"],
+    queryKey: ["admin-wk-players"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("players")
+        .from("wk_players")
         .select("*")
         .order("country")
         .order("name");
@@ -103,20 +101,19 @@ const AdminPlayers = () => {
 
   const createMutation = useMutation({
     mutationFn: async (data: PlayerFormData) => {
-      const { error } = await supabase.from("players").insert({
+      const { error } = await supabase.from("wk_players").insert({
         name: data.name,
         country: data.country,
         position: data.position,
-        date_of_birth: data.date_of_birth || null,
+        age: data.age,
         goals: data.goals,
-        club: data.club || null,
-        jersey_number: data.jersey_number,
+        international_caps: data.international_caps,
       });
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-players"] });
-      queryClient.invalidateQueries({ queryKey: ["players"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-wk-players"] });
+      queryClient.invalidateQueries({ queryKey: ["wk-players"] });
       toast.success("Speler toegevoegd");
       setIsDialogOpen(false);
       setFormData(emptyFormData);
@@ -129,22 +126,21 @@ const AdminPlayers = () => {
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: PlayerFormData }) => {
       const { error } = await supabase
-        .from("players")
+        .from("wk_players")
         .update({
           name: data.name,
           country: data.country,
           position: data.position,
-          date_of_birth: data.date_of_birth || null,
+          age: data.age,
           goals: data.goals,
-          club: data.club || null,
-          jersey_number: data.jersey_number,
+          international_caps: data.international_caps,
         })
         .eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-players"] });
-      queryClient.invalidateQueries({ queryKey: ["players"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-wk-players"] });
+      queryClient.invalidateQueries({ queryKey: ["wk-players"] });
       toast.success("Speler bijgewerkt");
       setIsDialogOpen(false);
       setEditingPlayer(null);
@@ -157,12 +153,12 @@ const AdminPlayers = () => {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("players").delete().eq("id", id);
+      const { error } = await supabase.from("wk_players").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-players"] });
-      queryClient.invalidateQueries({ queryKey: ["players"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-wk-players"] });
+      queryClient.invalidateQueries({ queryKey: ["wk-players"] });
       toast.success("Speler verwijderd");
     },
     onError: (error) => {
@@ -182,10 +178,9 @@ const AdminPlayers = () => {
       name: player.name,
       country: player.country,
       position: player.position,
-      date_of_birth: player.date_of_birth || "",
+      age: player.age,
       goals: player.goals,
-      club: player.club || "",
-      jersey_number: player.jersey_number,
+      international_caps: player.international_caps,
     });
     setIsDialogOpen(true);
   };
@@ -202,9 +197,11 @@ const AdminPlayers = () => {
   const filteredPlayers = players?.filter(
     (player) =>
       player.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      player.country.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (player.club?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false)
+      player.country.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  // Get unique countries for stats
+  const uniqueCountries = [...new Set(players?.map(p => p.country) || [])];
 
   if (!user) {
     return (
@@ -266,11 +263,15 @@ const AdminPlayers = () => {
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
             <div>
               <h1 className="text-3xl font-bold font-display mb-2">
-                Spelers Beheer
+                WK Spelers Beheer
               </h1>
-              <p className="text-muted-foreground">
-                Beheer alle WK spelers
-              </p>
+              <div className="flex items-center gap-4 text-muted-foreground">
+                <span className="flex items-center gap-1">
+                  <Users className="w-4 h-4" />
+                  {players?.length || 0} spelers
+                </span>
+                <span>{uniqueCountries.length} landen</span>
+              </div>
             </div>
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
@@ -339,27 +340,28 @@ const AdminPlayers = () => {
                       </Select>
                     </div>
                     <div>
-                      <Label htmlFor="jersey_number">Rugnummer</Label>
+                      <Label htmlFor="age">Leeftijd *</Label>
                       <Input
-                        id="jersey_number"
+                        id="age"
                         type="number"
-                        value={formData.jersey_number ?? ""}
+                        min="16"
+                        max="50"
+                        value={formData.age}
                         onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            jersey_number: e.target.value ? parseInt(e.target.value) : null,
-                          })
+                          setFormData({ ...formData, age: parseInt(e.target.value) || 25 })
                         }
+                        required
                       />
                     </div>
                     <div>
-                      <Label htmlFor="date_of_birth">Geboortedatum</Label>
+                      <Label htmlFor="international_caps">Interlands</Label>
                       <Input
-                        id="date_of_birth"
-                        type="date"
-                        value={formData.date_of_birth}
+                        id="international_caps"
+                        type="number"
+                        min="0"
+                        value={formData.international_caps}
                         onChange={(e) =>
-                          setFormData({ ...formData, date_of_birth: e.target.value })
+                          setFormData({ ...formData, international_caps: parseInt(e.target.value) || 0 })
                         }
                       />
                     </div>
@@ -373,17 +375,6 @@ const AdminPlayers = () => {
                         onChange={(e) =>
                           setFormData({ ...formData, goals: parseInt(e.target.value) || 0 })
                         }
-                      />
-                    </div>
-                    <div className="col-span-2">
-                      <Label htmlFor="club">Club</Label>
-                      <Input
-                        id="club"
-                        value={formData.club}
-                        onChange={(e) =>
-                          setFormData({ ...formData, club: e.target.value })
-                        }
-                        placeholder="FC Barcelona"
                       />
                     </div>
                   </div>
@@ -411,7 +402,7 @@ const AdminPlayers = () => {
           <div className="relative mb-6">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
-              placeholder="Zoek speler, land of club..."
+              placeholder="Zoek speler of land..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10"
@@ -424,10 +415,12 @@ const AdminPlayers = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Foto</TableHead>
                     <TableHead>Speler</TableHead>
                     <TableHead>Land</TableHead>
                     <TableHead>Positie</TableHead>
-                    <TableHead>Club</TableHead>
+                    <TableHead className="text-center">Leeftijd</TableHead>
+                    <TableHead className="text-center">Interlands</TableHead>
                     <TableHead className="text-center">Goals</TableHead>
                     <TableHead className="w-[100px]"></TableHead>
                   </TableRow>
@@ -435,7 +428,7 @@ const AdminPlayers = () => {
                 <TableBody>
                   {isLoading ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8">
+                      <TableCell colSpan={8} className="text-center py-8">
                         <div className="flex items-center justify-center">
                           <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
                         </div>
@@ -443,7 +436,7 @@ const AdminPlayers = () => {
                     </TableRow>
                   ) : filteredPlayers?.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                         Geen spelers gevonden
                       </TableCell>
                     </TableRow>
@@ -451,14 +444,20 @@ const AdminPlayers = () => {
                     filteredPlayers?.map((player) => (
                       <TableRow key={player.id}>
                         <TableCell>
-                          <div className="flex items-center gap-2">
-                            {player.jersey_number && (
-                              <span className="text-xs font-bold text-primary">
-                                #{player.jersey_number}
-                              </span>
-                            )}
-                            <span className="font-medium">{player.name}</span>
-                          </div>
+                          {player.image_url ? (
+                            <img 
+                              src={player.image_url} 
+                              alt={player.name}
+                              className="w-10 h-10 rounded-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                              <span className="text-xs text-muted-foreground">?</span>
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <span className="font-medium">{player.name}</span>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
@@ -469,8 +468,11 @@ const AdminPlayers = () => {
                         <TableCell>
                           <Badge variant="outline">{player.position}</Badge>
                         </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {player.club || "-"}
+                        <TableCell className="text-center">
+                          {player.age}
+                        </TableCell>
+                        <TableCell className="text-center text-muted-foreground">
+                          {player.international_caps}
                         </TableCell>
                         <TableCell className="text-center">
                           <div className="flex items-center justify-center gap-1 text-primary font-bold">
