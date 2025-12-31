@@ -213,6 +213,63 @@ const AdminPlayers = () => {
   // Get players without images
   const playersWithoutImages = players?.filter(p => !p.image_url) || [];
 
+  // Get players without images for selected country
+  const playersWithoutImagesForCountry = countryFilter !== "all" 
+    ? players?.filter(p => p.country === countryFilter && !p.image_url) || []
+    : [];
+
+  // Fetch images for selected country
+  const handleFetchImagesForCountry = async () => {
+    if (countryFilter === "all" || playersWithoutImagesForCountry.length === 0) {
+      toast.info("Geen spelers zonder foto in dit land");
+      return;
+    }
+
+    setIsFetchingImages(true);
+    setFetchProgress({ current: 0, total: playersWithoutImagesForCountry.length });
+
+    // Process in batches of 5 to avoid rate limiting
+    const batchSize = 5;
+    let totalFetched = 0;
+    let totalUpdated = 0;
+    const allErrors: string[] = [];
+
+    for (let i = 0; i < playersWithoutImagesForCountry.length; i += batchSize) {
+      const batch = playersWithoutImagesForCountry.slice(i, i + batchSize);
+      
+      const result = await fetchAndUpdatePlayerImages(
+        batch.map(p => ({ id: p.id, name: p.name, country: p.country }))
+      );
+
+      totalFetched += result.fetched;
+      totalUpdated += result.updated;
+      allErrors.push(...result.errors);
+
+      setFetchProgress({ current: Math.min(i + batchSize, playersWithoutImagesForCountry.length), total: playersWithoutImagesForCountry.length });
+
+      // Small delay between batches to avoid rate limiting
+      if (i + batchSize < playersWithoutImagesForCountry.length) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    }
+
+    setIsFetchingImages(false);
+    setFetchProgress({ current: 0, total: 0 });
+    
+    queryClient.invalidateQueries({ queryKey: ["admin-wk-players"] });
+    queryClient.invalidateQueries({ queryKey: ["wk-players"] });
+
+    if (totalUpdated > 0) {
+      toast.success(`${totalUpdated} foto's opgehaald voor ${countryFilter}`);
+    } else {
+      toast.info("Geen nieuwe foto's gevonden");
+    }
+
+    if (allErrors.length > 0) {
+      console.error("Errors fetching images:", allErrors);
+    }
+  };
+
   // Fetch all missing images
   const handleFetchAllMissingImages = async () => {
     if (!playersWithoutImages.length) {
@@ -526,6 +583,25 @@ const AdminPlayers = () => {
                 ))}
               </SelectContent>
             </Select>
+            {countryFilter !== "all" && playersWithoutImagesForCountry.length > 0 && (
+              <Button
+                variant="secondary"
+                onClick={handleFetchImagesForCountry}
+                disabled={isFetchingImages}
+              >
+                {isFetchingImages ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Bezig...
+                  </>
+                ) : (
+                  <>
+                    <ImageIcon className="w-4 h-4 mr-2" />
+                    Foto's {countryFilter} ({playersWithoutImagesForCountry.length})
+                  </>
+                )}
+              </Button>
+            )}
           </div>
 
           {/* Players Table */}
