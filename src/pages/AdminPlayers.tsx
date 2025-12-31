@@ -71,6 +71,7 @@ const AdminPlayers = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
+  const [countryFilter, setCountryFilter] = useState<string>("all");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
   const [formData, setFormData] = useState<PlayerFormData>(emptyFormData);
@@ -198,11 +199,13 @@ const AdminPlayers = () => {
     }
   };
 
-  const filteredPlayers = players?.filter(
-    (player) =>
+  const filteredPlayers = players?.filter((player) => {
+    const matchesSearch =
       player.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      player.country.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+      player.country.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCountry = countryFilter === "all" || player.country === countryFilter;
+    return matchesSearch && matchesCountry;
+  });
 
   // Get unique countries for stats
   const uniqueCountries = [...new Set(players?.map(p => p.country) || [])];
@@ -496,15 +499,33 @@ const AdminPlayers = () => {
             </div>
           )}
 
-          {/* Search */}
-          <div className="relative mb-6">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="Zoek speler of land..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
+          {/* Search and Filter */}
+          <div className="flex flex-col sm:flex-row gap-4 mb-6">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Zoek speler..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <Select value={countryFilter} onValueChange={setCountryFilter}>
+              <SelectTrigger className="w-full sm:w-[200px]">
+                <SelectValue placeholder="Filter op land" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Alle landen ({uniqueCountries.length})</SelectItem>
+                {uniqueCountries.sort().map((country) => (
+                  <SelectItem key={country} value={country}>
+                    <div className="flex items-center gap-2">
+                      <FlagImage teamName={country} size="sm" />
+                      {country} ({players?.filter(p => p.country === country).length})
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Players Table */}
