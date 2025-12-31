@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import {
   Dialog,
   DialogContent,
@@ -31,10 +32,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Edit, Trash2, Goal, Search, Shield, AlertCircle, Users } from "lucide-react";
+import { Plus, Edit, Trash2, Goal, Search, Shield, AlertCircle, Users, ImageIcon, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { FlagImage } from "@/components/FlagImage";
+import { fetchAndUpdatePlayerImages } from "@/lib/api/player-images";
 
 interface Player {
   id: string;
@@ -72,6 +74,8 @@ const AdminPlayers = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
   const [formData, setFormData] = useState<PlayerFormData>(emptyFormData);
+  const [isFetchingImages, setIsFetchingImages] = useState(false);
+  const [fetchProgress, setFetchProgress] = useState({ current: 0, total: 0 });
 
   // Check if user is admin
   const { data: isAdmin, isLoading: isCheckingAdmin } = useQuery({
@@ -203,6 +207,61 @@ const AdminPlayers = () => {
   // Get unique countries for stats
   const uniqueCountries = [...new Set(players?.map(p => p.country) || [])];
 
+  // Get players without images
+  const playersWithoutImages = players?.filter(p => !p.image_url) || [];
+
+  // Fetch all missing images
+  const handleFetchAllMissingImages = async () => {
+    if (!playersWithoutImages.length) {
+      toast.info("Alle spelers hebben al een foto");
+      return;
+    }
+
+    setIsFetchingImages(true);
+    setFetchProgress({ current: 0, total: playersWithoutImages.length });
+
+    // Process in batches of 5 to avoid rate limiting
+    const batchSize = 5;
+    let totalFetched = 0;
+    let totalUpdated = 0;
+    const allErrors: string[] = [];
+
+    for (let i = 0; i < playersWithoutImages.length; i += batchSize) {
+      const batch = playersWithoutImages.slice(i, i + batchSize);
+      
+      const result = await fetchAndUpdatePlayerImages(
+        batch.map(p => ({ id: p.id, name: p.name, country: p.country }))
+      );
+
+      totalFetched += result.fetched;
+      totalUpdated += result.updated;
+      allErrors.push(...result.errors);
+
+      setFetchProgress({ current: Math.min(i + batchSize, playersWithoutImages.length), total: playersWithoutImages.length });
+
+      // Small delay between batches to avoid rate limiting
+      if (i + batchSize < playersWithoutImages.length) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    }
+
+    setIsFetchingImages(false);
+    setFetchProgress({ current: 0, total: 0 });
+    
+    queryClient.invalidateQueries({ queryKey: ["admin-wk-players"] });
+    queryClient.invalidateQueries({ queryKey: ["wk-players"] });
+
+    if (totalUpdated > 0) {
+      toast.success(`${totalUpdated} spelerfoto's opgehaald en opgeslagen`);
+    } else {
+      toast.info("Geen nieuwe foto's gevonden");
+    }
+
+    if (allErrors.length > 0) {
+      console.error("Errors fetching images:", allErrors);
+    }
+  };
+
   if (!user) {
     return (
       <div className="min-h-screen bg-background">
@@ -271,15 +330,38 @@ const AdminPlayers = () => {
                   {players?.length || 0} spelers
                 </span>
                 <span>{uniqueCountries.length} landen</span>
+                {playersWithoutImages.length > 0 && (
+                  <span className="text-orange-500">
+                    {playersWithoutImages.length} zonder foto
+                  </span>
+                )}
               </div>
             </div>
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogTrigger asChild>
-                <Button onClick={handleOpenCreate}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Speler toevoegen
-                </Button>
-              </DialogTrigger>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={handleFetchAllMissingImages}
+                disabled={isFetchingImages || playersWithoutImages.length === 0}
+              >
+                {isFetchingImages ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Bezig ({fetchProgress.current}/{fetchProgress.total})
+                  </>
+                ) : (
+                  <>
+                    <ImageIcon className="w-4 h-4 mr-2" />
+                    Foto's ophalen ({playersWithoutImages.length})
+                  </>
+                )}
+              </Button>
+              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button onClick={handleOpenCreate}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Speler toevoegen
+                  </Button>
+                </DialogTrigger>
               <DialogContent className="max-w-lg">
                 <DialogHeader>
                   <DialogTitle>
@@ -396,7 +478,23 @@ const AdminPlayers = () => {
                 </form>
               </DialogContent>
             </Dialog>
+            </div>
           </div>
+
+          {/* Progress bar for fetching images */}
+          {isFetchingImages && (
+            <div className="mb-6">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm text-muted-foreground">
+                  Foto's ophalen van Transfermarkt...
+                </span>
+                <span className="text-sm font-medium">
+                  {fetchProgress.current} / {fetchProgress.total}
+                </span>
+              </div>
+              <Progress value={(fetchProgress.current / fetchProgress.total) * 100} />
+            </div>
+          )}
 
           {/* Search */}
           <div className="relative mb-6">
